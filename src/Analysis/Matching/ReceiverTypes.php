@@ -25,9 +25,8 @@ final class ReceiverTypes
     /** @param list<Chain> $chains */
     public function __construct(
         private readonly array $chains = [],
-        private readonly ClassMatcher $classes = new ClassMatcher(),
-    ) {
-    }
+        private readonly ClassMatcher $classes = new ClassMatcher,
+    ) {}
 
     public function typeOf(Expr $receiver, TypeMap $types): ?string
     {

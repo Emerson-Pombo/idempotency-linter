@@ -15,6 +15,5 @@ final class Sink
         public readonly RiskLevel $risk,
         public readonly string $message,
         public readonly array $rules,
-    ) {
-    }
+    ) {}
 }

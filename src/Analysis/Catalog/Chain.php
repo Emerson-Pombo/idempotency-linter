@@ -19,8 +19,7 @@ final class Chain
         public readonly string $class,
         public readonly array $methods,
         public readonly string $returns,
-    ) {
-    }
+    ) {}
 
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self

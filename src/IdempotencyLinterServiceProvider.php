@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace IdempotencyLinter;
 
+use IdempotencyLinter\Analysis\Catalog\Catalog;
 use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 use IdempotencyLinter\Analysis\JobFinder;
-use IdempotencyLinter\Analysis\Catalog\Catalog;
 use IdempotencyLinter\Analysis\SinkGuardAnalyzer;
 use IdempotencyLinter\Console\ScanCommand;
 use Illuminate\Support\ServiceProvider;

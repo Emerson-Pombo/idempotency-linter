@@ -11,9 +11,7 @@ use IdempotencyLinter\Analysis\Catalog\MatchRule;
  */
 final class RuleMatcher
 {
-    public function __construct(private readonly ClassMatcher $classes = new ClassMatcher())
-    {
-    }
+    public function __construct(private readonly ClassMatcher $classes = new ClassMatcher) {}
 
     public function matches(MatchRule $rule, Call $call): bool
     {

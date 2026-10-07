@@ -19,14 +19,13 @@ use PhpParser\Node\NullableType;
 final class TypeMap
 {
     /**
-     * @param array<string, string> $properties
-     * @param array<string, string> $variables
+     * @param  array<string, string>  $properties
+     * @param  array<string, string>  $variables
      */
     private function __construct(
         private readonly array $properties,
         private readonly array $variables,
-    ) {
-    }
+    ) {}
 
     public static function forJob(JobClass $job): self
     {
@@ -44,7 +43,7 @@ final class TypeMap
             }
         }
 
-        foreach ($job->node->getMethod('__construct')?->params ?? [] as $param) {
+        foreach ($job->node->getMethod('__construct')->params ?? [] as $param) {
             $type = self::className($param->type);
 
             if ($param->flags !== 0 && $type !== null && $param->var instanceof Node\Expr\Variable && is_string($param->var->name)) {
@@ -54,7 +53,7 @@ final class TypeMap
 
         $variables = [];
 
-        foreach ($job->entryMethod?->params ?? [] as $param) {
+        foreach ($job->entryMethod->params ?? [] as $param) {
             $type = self::className($param->type);
 
             if ($type !== null && $param->var instanceof Node\Expr\Variable && is_string($param->var->name)) {

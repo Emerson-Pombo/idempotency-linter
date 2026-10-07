@@ -17,19 +17,19 @@ final class Scanner
     public function __construct(
         private readonly JobFinder $finder,
         private readonly JobAnalyzer $analyzer,
-    ) {
-    }
+    ) {}
 
     /** @param list<string> $paths */
     public function scan(array $paths): ScanResult
     {
-        $result = new ScanResult();
+        $result = new ScanResult;
 
         foreach ($this->finder->phpFiles($paths) as $file) {
             try {
                 $jobs = $this->finder->findInFile($file);
             } catch (ParserError $e) {
                 $result->addError($file, $e->getMessage());
+
                 continue;
             }
 

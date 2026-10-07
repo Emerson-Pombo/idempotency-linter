@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
+    runs-on: ubuntu-latest
+    env:
+      # As linhas 10 e 11 do Laravel têm avisos de segurança conhecidos e o Composer
+      # bloqueia a instalação por padrão. Aqui elas são instaladas de propósito, só
+      # para testar a compatibilidade do pacote.
+      COMPOSER_NO_SECURITY_BLOCKING: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { php: '8.1', laravel: '10', testbench: '^8.0' }
+          - { php: '8.2', laravel: '10', testbench: '^8.0' }
+          - { php: '8.3', laravel: '10', testbench: '^8.0' }
+          - { php: '8.2', laravel: '11', testbench: '^9.0' }
+          - { php: '8.3', laravel: '11', testbench: '^9.0' }
+          - { php: '8.2', laravel: '12', testbench: '^10.0' }
+          - { php: '8.3', laravel: '12', testbench: '^10.0' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instala o PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, mbstring, tokenizer, xml, xmlwriter
+          coverage: none
+
+      - name: Fixa a versão do Laravel (via Testbench)
+        run: >
+          composer require --dev "orchestra/testbench:${{ matrix.testbench }}"
+          --no-interaction --no-update
+
+      - name: Instala as dependências
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Roda os testes
+        run: vendor/bin/phpunit
+
+  quality:
+    name: Estilo e análise estática
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instala o PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, mbstring, tokenizer, xml, xmlwriter
+          coverage: none
+
+      - name: Instala as dependências
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Estilo (Pint)
+        run: composer lint
+
+      - name: Análise estática (PHPStan)
+        run: composer analyse

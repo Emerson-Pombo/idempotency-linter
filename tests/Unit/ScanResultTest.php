@@ -18,7 +18,7 @@ final class ScanResultTest extends TestCase
 
     public function test_findings_are_sorted_by_risk_then_file_then_line(): void
     {
-        $result = new ScanResult();
+        $result = new ScanResult;
         $low = $this->finding('A', RiskLevel::Low);
         $highB = $this->finding('B', RiskLevel::High, 'b.php', 3);
         $highA2 = $this->finding('C', RiskLevel::High, 'a.php', 9);
@@ -33,7 +33,7 @@ final class ScanResultTest extends TestCase
 
     public function test_has_findings_at_or_above_threshold(): void
     {
-        $result = new ScanResult();
+        $result = new ScanResult;
         $result->addFinding($this->finding('A', RiskLevel::Medium));
 
         $this->assertTrue($result->hasFindingsAtOrAbove(RiskLevel::Low));
@@ -43,7 +43,7 @@ final class ScanResultTest extends TestCase
 
     public function test_risky_jobs_are_counted_once_per_job(): void
     {
-        $result = new ScanResult();
+        $result = new ScanResult;
         $result->addFinding($this->finding('A', RiskLevel::High));
         $result->addFinding($this->finding('A', RiskLevel::Low));
         $result->addFinding($this->finding('B', RiskLevel::Low));
@@ -53,7 +53,7 @@ final class ScanResultTest extends TestCase
 
     public function test_records_errors(): void
     {
-        $result = new ScanResult();
+        $result = new ScanResult;
         $result->addError('x.php', 'boom');
 
         $this->assertSame([['file' => 'x.php', 'error' => 'boom']], $result->errors());

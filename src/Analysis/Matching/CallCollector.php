@@ -17,14 +17,12 @@ use PhpParser\NodeFinder;
  */
 final class CallCollector
 {
-    public function __construct(private readonly ReceiverTypes $receivers = new ReceiverTypes())
-    {
-    }
+    public function __construct(private readonly ReceiverTypes $receivers = new ReceiverTypes) {}
 
     /** @return list<Call> */
     public function collect(ClassMethod $method, TypeMap $types): array
     {
-        $nodes = (new NodeFinder())->find(
+        $nodes = (new NodeFinder)->find(
             $method->stmts ?? [],
             fn (Node $node) => $node instanceof StaticCall || $node instanceof FuncCall || $node instanceof MethodCall || $node instanceof Array_,
         );
@@ -37,6 +35,7 @@ final class CallCollector
                 $node instanceof FuncCall => $this->functionCall($node),
                 $node instanceof MethodCall => $this->methodCall($node, $types),
                 $node instanceof Array_ => $this->arrayLiteral($node),
+                default => null,
             };
 
             if ($call !== null) {

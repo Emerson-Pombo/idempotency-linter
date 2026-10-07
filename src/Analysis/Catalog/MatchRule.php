@@ -14,8 +14,8 @@ final class MatchRule
     public const TYPES = ['static_call', 'method_call', 'function', 'interface', 'array_key'];
 
     /**
-     * @param list<string> $methods  métodos (static_call/method_call) ou funções (function)
-     * @param list<string> $keys     chaves de array (array_key)
+     * @param  list<string>  $methods  métodos (static_call/method_call) ou funções (function)
+     * @param  list<string>  $keys  chaves de array (array_key)
      */
     public function __construct(
         public readonly string $type,

@@ -10,8 +10,8 @@ namespace IdempotencyLinter\Analysis\Matching;
 final class Call
 {
     /**
-     * @param ?string $class  classe da chamada estática ou tipo do receptor
-     * @param list<string> $keys  chaves string literais (só para arrays)
+     * @param  ?string  $class  classe da chamada estática ou tipo do receptor
+     * @param  list<string>  $keys  chaves string literais (só para arrays)
      */
     public function __construct(
         public readonly CallKind $kind,
@@ -21,6 +21,5 @@ final class Call
         public readonly int $startPos,
         public readonly int $endPos,
         public readonly int $line,
-    ) {
-    }
+    ) {}
 }
