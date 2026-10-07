@@ -139,7 +139,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
             }
         }
 
-        return false;
+        return $job->parent !== null && $this->classes->matches($job->parent, $interface);
     }
 
     /**

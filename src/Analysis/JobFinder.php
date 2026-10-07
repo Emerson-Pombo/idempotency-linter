@@ -115,10 +115,7 @@ final class JobFinder
                 continue;
             }
 
-            $interfaces = array_map(
-                fn (Node\Name $name) => $name->toString(),
-                $class->implements,
-            );
+            $interfaces = $this->declaredInterfaces($class, $declared);
 
             $jobs[] = new JobClass(
                 file: $file,
@@ -127,6 +124,7 @@ final class JobFinder
                 interfaces: $interfaces,
                 node: $class,
                 entryMethod: $class->getMethod($this->entryMethod),
+                parent: $class->extends?->toString(),
             );
         }
 
@@ -163,6 +161,34 @@ final class JobFinder
         return $local !== null
             ? $this->isJob($local, $declared, $seen)
             : $this->classes->matches($parent, $this->jobInterface);
+    }
+
+    /**
+     * Interfaces declaradas na classe e nos ancestrais do mesmo arquivo. Ancestrais
+     * de outros arquivos ficam por conta de {@see JobClass::$parent}.
+     *
+     * @param array<string, Class_> $declared
+     * @param array<string, true> $seen
+     * @return list<string>
+     */
+    private function declaredInterfaces(Class_ $class, array $declared, array $seen = []): array
+    {
+        $key = strtolower($this->fullName($class));
+
+        if (isset($seen[$key])) {
+            return [];
+        }
+
+        $seen[$key] = true;
+
+        $interfaces = array_map(fn (Node\Name $name) => $name->toString(), $class->implements);
+        $parent = $class->extends !== null ? ($declared[strtolower($class->extends->toString())] ?? null) : null;
+
+        if ($parent !== null) {
+            array_push($interfaces, ...$this->declaredInterfaces($parent, $declared, $seen));
+        }
+
+        return array_values(array_unique($interfaces));
     }
 
     private function fullName(Class_ $class): string

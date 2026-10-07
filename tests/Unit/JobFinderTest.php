@@ -198,4 +198,25 @@ final class JobFinderTest extends TestCase
 
         $this->assertSame([$a, $b], $files);
     }
+
+    public function test_inherits_interfaces_from_ancestors_in_the_same_file(): void
+    {
+        $file = $this->fixture('Inherited.php', <<<'PHP'
+        <?php
+        namespace App\Jobs;
+
+        use Illuminate\Contracts\Queue\ShouldBeUnique;
+        use Illuminate\Contracts\Queue\ShouldQueue;
+
+        abstract class Base implements ShouldQueue, ShouldBeUnique {}
+        class Leaf extends Base {}
+        PHP);
+
+        $jobs = (new JobFinder())->findInFile($file);
+        $leaf = $jobs[1];
+
+        $this->assertSame('App\Jobs\Leaf', $leaf->className);
+        $this->assertSame('App\Jobs\Base', $leaf->parent);
+        $this->assertTrue($leaf->implements('Illuminate\Contracts\Queue\ShouldBeUnique'));
+    }
 }

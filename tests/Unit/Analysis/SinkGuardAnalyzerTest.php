@@ -357,4 +357,29 @@ final class SinkGuardAnalyzerTest extends TestCase
     {
         $this->assertSame([], $this->sinks('$foo->to($u)->send($m); Mail::desconhecido($u)->send($m); Http::withToken($t)->desconhecido()->post("u", []);'));
     }
+
+    public function test_should_be_unique_inherited_from_base_class_is_partial_protection(): void
+    {
+        $code = str_replace(
+            'implements ShouldQueue',
+            'extends \\IdempotencyLinter\\Tests\\Fixtures\\Jobs\\BaseUniqueJob',
+            $this->job('Mail::send($m);'),
+        );
+
+        $findings = $this->analyze($code);
+
+        $this->assertCount(1, $findings);
+        $this->assertSame(RiskLevel::Low, $findings[0]->risk);
+    }
+
+    public function test_job_extending_base_without_unique_keeps_original_risk(): void
+    {
+        $code = str_replace(
+            'implements ShouldQueue',
+            'extends \\IdempotencyLinter\\Tests\\Fixtures\\Jobs\\BaseQueuedJob',
+            $this->job('Mail::send($m);'),
+        );
+
+        $this->assertSame(RiskLevel::Medium, $this->analyze($code)[0]->risk);
+    }
 }

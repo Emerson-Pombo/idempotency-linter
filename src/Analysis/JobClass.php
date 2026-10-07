@@ -22,6 +22,7 @@ final class JobClass
         public readonly array $interfaces,
         public readonly Class_ $node,
         public readonly ?ClassMethod $entryMethod,
+        public readonly ?string $parent = null,
     ) {
     }
 
