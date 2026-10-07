@@ -6,5 +6,5 @@ namespace IdempotencyLinter\Tests\Fixtures\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 
-/** Base que já traz ShouldBeUnique (via BaseQueuedJob vem ShouldQueue). */
+/** Base that already brings ShouldBeUnique (ShouldQueue comes via BaseQueuedJob). */
 abstract class BaseUniqueJob extends BaseQueuedJob implements ShouldBeUnique {}

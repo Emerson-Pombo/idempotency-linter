@@ -8,8 +8,8 @@ use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\Trait_;
 
 /**
- * Uma classe (ou trait) do projeto, já lida pelo parser, com a hierarquia
- * (traits e classe pai) resolvida sob demanda pelo {@see ClassLocator}.
+ * A project class (or trait), already read by the parser, with its hierarchy
+ * (traits and parent class) resolved on demand by the {@see ClassLocator}.
  */
 final class ClassContext
 {
@@ -33,7 +33,7 @@ final class ClassContext
         return $this->locator->locate($this->node->extends->toString(), $this->file);
     }
 
-    /** @return list<self> traits do projeto usadas diretamente por esta classe */
+    /** @return list<self> project traits used directly by this class */
     public function traits(): array
     {
         $traits = [];
@@ -52,7 +52,7 @@ final class ClassContext
     }
 
     /**
-     * Procura o método na classe, depois nas traits e por fim na cadeia de pais.
+     * Looks for the method on the class, then on its traits and finally up the parent chain.
      *
      * @param  array<string, true>  $seen
      */
@@ -83,8 +83,8 @@ final class ClassContext
     }
 
     /**
-     * Tipos declarados das propriedades, incluindo as promovidas no construtor e
-     * as vindas de traits e de classes pai. A própria classe tem precedência.
+     * Declared property types, including those promoted in the constructor and
+     * those coming from traits and parent classes. The class itself takes precedence.
      *
      * @param  array<string, true>  $seen
      * @return array<string, string>

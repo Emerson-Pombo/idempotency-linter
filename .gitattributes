@@ -1,7 +1,7 @@
-# Normaliza finais de linha
+# Normalize line endings
 * text=auto eol=lf
 
-# Arquivos que não vão no pacote instalado (composer require / git archive)
+# Files that do not ship in the installed package (composer require / git archive)
 /.github/ export-ignore
 /tests/ export-ignore
 /.gitattributes export-ignore

@@ -15,11 +15,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ScanCommand extends Command
 {
     protected $signature = 'idempotency:scan
-        {paths?* : Arquivos ou diretórios a analisar (padrão: config idempotency-linter.paths)}
-        {--fail-on=low : Nível mínimo de risco que faz o comando falhar (high, medium, low, none)}
-        {--format=text : Formato da saída (text, json)}';
+        {paths?* : Files or directories to analyze (default: config idempotency-linter.paths)}
+        {--fail-on=low : Minimum risk level that makes the command fail (high, medium, low, none)}
+        {--format=text : Output format (text, json)}';
 
-    protected $description = 'Analisa jobs de fila em busca de efeitos colaterais sem proteção contra reexecução.';
+    protected $description = 'Analyzes queue jobs for side effects that are not protected against re-execution.';
 
     public function handle(Scanner $scanner): int
     {
@@ -27,7 +27,7 @@ final class ScanCommand extends Command
         $threshold = $failOn === 'none' ? null : RiskLevel::tryFrom($failOn);
 
         if ($failOn !== 'none' && $threshold === null) {
-            $this->error("Valor inválido para --fail-on: {$failOn}. Use high, medium, low ou none.");
+            $this->error("Invalid value for --fail-on: {$failOn}. Use high, medium, low or none.");
 
             return self::INVALID;
         }
@@ -35,7 +35,7 @@ final class ScanCommand extends Command
         $format = strtolower((string) $this->option('format'));
 
         if (! in_array($format, ['text', 'json'], true)) {
-            $this->error("Valor inválido para --format: {$format}. Use text ou json.");
+            $this->error("Invalid value for --format: {$format}. Use text or json.");
 
             return self::INVALID;
         }
@@ -46,14 +46,14 @@ final class ScanCommand extends Command
         $result = $scanner->scan($paths);
 
         if ($format === 'json') {
-            $pathErrors = array_map(fn (string $path) => ['file' => $path, 'error' => 'Caminho não encontrado'], $missing);
+            $pathErrors = array_map(fn (string $path) => ['file' => $path, 'error' => 'Path not found'], $missing);
             $reporter = new JsonReporter($this->relative(...));
 
-            // Saída crua: o JSON não pode passar pelo formatador de estilos do console.
+            // Raw output: the JSON must not go through the console style formatter.
             $this->output->writeln($reporter->render($result, $pathErrors), OutputInterface::OUTPUT_RAW);
         } else {
             foreach ($missing as $path) {
-                $this->warn("Caminho não encontrado: {$this->relative($path)}");
+                $this->warn("Path not found: {$this->relative($path)}");
             }
 
             $this->render($result);
@@ -81,7 +81,7 @@ final class ScanCommand extends Command
     private function render(ScanResult $result): void
     {
         foreach ($result->errors() as $error) {
-            $this->warn("⚠️  Não foi possível analisar {$this->relative($error['file'])}: {$error['error']}");
+            $this->warn("⚠️  Could not analyze {$this->relative($error['file'])}: {$error['error']}");
         }
 
         foreach ($result->findings() as $finding) {
@@ -89,20 +89,19 @@ final class ScanCommand extends Command
         }
 
         if ($result->jobCount() === 0) {
-            $this->info('Nenhum job (ShouldQueue) encontrado.');
+            $this->info('No jobs (ShouldQueue) found.');
 
             return;
         }
 
         $this->newLine();
         $this->line(sprintf(
-            '%s %d %s, %d com risco, %d %s corretamente.',
+            '%s %d %s, %d at risk, %d protected.',
             $result->riskyJobCount() > 0 ? '❌' : '✅',
             $result->jobCount(),
-            $result->jobCount() === 1 ? 'job analisado' : 'jobs analisados',
+            $result->jobCount() === 1 ? 'job analyzed' : 'jobs analyzed',
             $result->riskyJobCount(),
             $result->protectedJobCount(),
-            $result->protectedJobCount() === 1 ? 'protegido' : 'protegidos',
         ));
     }
 

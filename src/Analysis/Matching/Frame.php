@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Analysis\Matching;
 
 /**
- * Um método em execução durante a coleta: de onde ele vem, em que classe concreta
- * `$this` aponta, os tipos conhecidos ali e a pilha de métodos já em execução.
+ * A method being executed during collection: where it comes from, which concrete
+ * class `$this` points to, the types known there and the stack of methods
+ * already running.
  */
 final class Frame
 {
-    /** @param list<string> $stack chaves ({@see MethodRef::key()}) dos métodos em execução */
+    /** @param list<string> $stack keys ({@see MethodRef::key()}) of the running methods */
     public function __construct(
         public readonly MethodRef $method,
         public readonly ClassContext $context,

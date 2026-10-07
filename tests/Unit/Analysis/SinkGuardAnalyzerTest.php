@@ -9,7 +9,7 @@ use IdempotencyLinter\Tests\TestCase;
 
 final class SinkGuardAnalyzerTest extends TestCase
 {
-    /** Monta um job com o corpo informado no handle(). */
+    /** Builds a job with the given body in handle(). */
     private function job(string $body, string $extra = ''): string
     {
         return <<<PHP
@@ -42,7 +42,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
         $this->assertSame('App\Jobs\Sample', $findings[0]->jobClass);
         $this->assertSame(15, $findings[0]->line);
-        $this->assertSame('Envio de e-mail sem verificação de idempotência.', $findings[0]->message);
+        $this->assertSame('Email sent without an idempotency check.', $findings[0]->message);
     }
 
     public function test_reports_one_finding_per_call(): void
@@ -253,8 +253,8 @@ final class SinkGuardAnalyzerTest extends TestCase
 
         $this->assertCount(1, $findings);
         $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
-        $this->assertStringContainsString('Chamada a gateway de pagamento', $findings[0]->message);
-        $this->assertStringContainsString('Proteção parcial', $findings[0]->message);
+        $this->assertStringContainsString('Call to a payment gateway', $findings[0]->message);
+        $this->assertStringContainsString('Partial protection', $findings[0]->message);
     }
 
     public function test_should_be_unique_lowers_medium_risk_to_low(): void
@@ -288,7 +288,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         $findings = $this->analyze($this->job('Mail::send($m);'));
 
         $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
-        $this->assertStringNotContainsString('parcial', $findings[0]->message);
+        $this->assertStringNotContainsString('Partial protection', $findings[0]->message);
     }
 
     /** @return list<string> */
@@ -383,7 +383,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         $this->assertSame(RiskLevel::Medium, $this->analyze($code)[0]->risk);
     }
 
-    /** @param list<string> $methods corpos de métodos privados, `m1`, `m2`... */
+    /** @param list<string> $methods bodies of private methods, `m1`, `m2`... */
     private function withMethods(string $handleBody, string ...$methods): string
     {
         return $this->job($handleBody, implode("\n", $methods));
@@ -454,7 +454,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         $this->assertCount(1, $this->analyze($code));
     }
 
-    /** Cadeia handle → m1 → … → m{$levels}, com o sink no último método. */
+    /** Chain handle → m1 → … → m{$levels}, with the sink in the last method. */
     private function chain(int $levels): string
     {
         $methods = [];

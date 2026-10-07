@@ -33,7 +33,7 @@ final class ScanCommandTest extends TestCase
 
             public function analyze(JobClass $job): array
             {
-                return [new Finding($job->file, $job->line, $job->className, 'mail', $this->risk, 'achado')];
+                return [new Finding($job->file, $job->line, $job->className, 'mail', $this->risk, 'finding')];
             }
         });
     }
@@ -41,14 +41,14 @@ final class ScanCommandTest extends TestCase
     public function test_reports_when_no_jobs_found(): void
     {
         $this->artisan('idempotency:scan', ['paths' => [$this->fixture('x.php', '<?php')]])
-            ->expectsOutputToContain('Nenhum job')
+            ->expectsOutputToContain('No jobs')
             ->assertExitCode(0);
     }
 
     public function test_succeeds_when_jobs_have_no_findings(): void
     {
         $this->artisan('idempotency:scan', ['paths' => [$this->job()]])
-            ->expectsOutputToContain('1 job analisado, 0 com risco, 1 protegido')
+            ->expectsOutputToContain('1 job analyzed, 0 at risk, 1 protected')
             ->assertExitCode(0);
     }
 
@@ -57,7 +57,7 @@ final class ScanCommandTest extends TestCase
         $this->bindFindingWith(RiskLevel::Medium);
 
         $this->artisan('idempotency:scan', ['paths' => [$this->job()], '--fail-on' => 'medium'])
-            ->expectsOutputToContain('MÉDIO RISCO')
+            ->expectsOutputToContain('MEDIUM RISK')
             ->assertExitCode(1);
     }
 
@@ -80,14 +80,14 @@ final class ScanCommandTest extends TestCase
     public function test_rejects_invalid_fail_on(): void
     {
         $this->artisan('idempotency:scan', ['--fail-on' => 'banana'])
-            ->expectsOutputToContain('Valor inválido')
+            ->expectsOutputToContain('Invalid value')
             ->assertExitCode(2);
     }
 
     public function test_warns_about_missing_path(): void
     {
-        $this->artisan('idempotency:scan', ['paths' => ['/caminho/inexistente']])
-            ->expectsOutputToContain('Caminho não encontrado')
+        $this->artisan('idempotency:scan', ['paths' => ['/path/does-not-exist']])
+            ->expectsOutputToContain('Path not found')
             ->assertExitCode(0);
     }
 
@@ -107,7 +107,7 @@ final class ScanCommandTest extends TestCase
         PHP);
 
         $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'medium'])
-            ->expectsOutputToContain('MÉDIO RISCO')
+            ->expectsOutputToContain('MEDIUM RISK')
             ->assertExitCode(1);
 
         $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'high'])
@@ -147,7 +147,7 @@ final class ScanCommandTest extends TestCase
         PHP);
 
         $this->artisan('idempotency:scan', ['paths' => [$this->fixtureDir()], '--fail-on' => 'none'])
-            ->expectsOutputToContain('2 jobs analisados, 1 com risco, 1 protegido')
+            ->expectsOutputToContain('2 jobs analyzed, 1 at risk, 1 protected')
             ->assertExitCode(0);
     }
 
@@ -188,7 +188,7 @@ final class ScanCommandTest extends TestCase
         PHP);
 
         $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'medium'])
-            ->expectsOutputToContain('MÉDIO RISCO')
+            ->expectsOutputToContain('MEDIUM RISK')
             ->assertExitCode(1);
     }
 
@@ -205,7 +205,7 @@ final class ScanCommandTest extends TestCase
     }
     PHP;
 
-    /** @return array{0: int, 1: array<string, mixed>, 2: string} código, JSON decodificado, saída bruta */
+    /** @return array{0: int, 1: array<string, mixed>, 2: string} exit code, decoded JSON, raw output */
     private function scanJson(array $arguments): array
     {
         $code = Artisan::call('idempotency:scan', $arguments + ['--format' => 'json']);
@@ -229,7 +229,7 @@ final class ScanCommandTest extends TestCase
             'job' => 'Risky',
             'sink' => 'mail',
             'risk' => 'medium',
-            'message' => 'Envio de e-mail sem verificação de idempotência.',
+            'message' => 'Email sent without an idempotency check.',
         ]], $report['findings']);
         $this->assertSame([], $report['errors']);
     }
@@ -242,8 +242,8 @@ final class ScanCommandTest extends TestCase
 
         $this->assertStringStartsWith('{', ltrim($output));
         $this->assertStringEndsWith('}', rtrim($output));
-        $this->assertStringNotContainsString('MÉDIO RISCO', $output);
-        $this->assertStringNotContainsString('analisado', $output);
+        $this->assertStringNotContainsString('MEDIUM RISK', $output);
+        $this->assertStringNotContainsString('analyzed', $output);
     }
 
     public function test_json_format_respects_fail_on(): void
@@ -263,19 +263,19 @@ final class ScanCommandTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertSame(['jobs' => 0, 'risky_jobs' => 0, 'protected_jobs' => 0, 'findings' => 0, 'errors' => 0], $report['summary']);
-        $this->assertStringNotContainsString('Nenhum job', $output);
+        $this->assertStringNotContainsString('No jobs', $output);
     }
 
     public function test_json_format_reports_unparsable_files_and_missing_paths_as_errors(): void
     {
         $broken = $this->fixture('Broken.php', "<?php\nclass {");
 
-        [$code, $report] = $this->scanJson(['paths' => [$broken, '/caminho/inexistente']]);
+        [$code, $report] = $this->scanJson(['paths' => [$broken, '/path/does-not-exist']]);
 
         $this->assertSame(0, $code);
         $this->assertSame(2, $report['summary']['errors']);
-        $this->assertSame(['/caminho/inexistente', $broken], array_column($report['errors'], 'file'));
-        $this->assertSame('Caminho não encontrado', $report['errors'][0]['error']);
+        $this->assertSame(['/path/does-not-exist', $broken], array_column($report['errors'], 'file'));
+        $this->assertSame('Path not found', $report['errors'][0]['error']);
     }
 
     public function test_json_format_keeps_findings_sorted_by_risk(): void
@@ -300,14 +300,14 @@ final class ScanCommandTest extends TestCase
     public function test_rejects_unknown_format(): void
     {
         $this->artisan('idempotency:scan', ['--format' => 'xml'])
-            ->expectsOutputToContain('Valor inválido para --format')
+            ->expectsOutputToContain('Invalid value for --format')
             ->assertExitCode(2);
     }
 
     public function test_text_is_still_the_default_format(): void
     {
         $this->artisan('idempotency:scan', ['paths' => [$this->fixture('Risky.php', self::RISKY_JOB)]])
-            ->expectsOutputToContain('MÉDIO RISCO')
+            ->expectsOutputToContain('MEDIUM RISK')
             ->assertExitCode(1);
     }
 

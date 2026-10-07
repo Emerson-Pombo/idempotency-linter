@@ -1,10 +1,10 @@
-# Contribuindo
+# Contributing
 
-Obrigado por querer ajudar. Issues e pull requests são bem-vindos.
+Thanks for wanting to help. Issues and pull requests are welcome.
 
-## Preparando o ambiente
+## Setting up
 
-Requer PHP 8.1 ou superior, as extensões `dom`, `mbstring`, `tokenizer` e `xml` e o Composer.
+Requires PHP 8.1 or higher, the `dom`, `mbstring`, `tokenizer` and `xml` extensions, and Composer.
 
 ```bash
 git clone https://github.com/Emerson-Pombo/idempotency-linter.git
@@ -13,34 +13,34 @@ composer install
 composer check
 ```
 
-`composer check` roda o estilo (Pint), a análise estática (PHPStan, nível 6) e os testes. O CI roda o mesmo, mais a matriz PHP 8.1 a 8.3 × Laravel 10 a 13.
+`composer check` runs the code style check (Pint), static analysis (PHPStan, level 6) and the tests. CI runs the same, plus the PHP 8.1 to 8.3 × Laravel 10 to 13 matrix.
 
-| Comando | O que faz |
+| Command | What it does |
 |---|---|
 | `composer test` | PHPUnit |
-| `composer lint` | confere o estilo sem alterar arquivos |
-| `composer format` | aplica o estilo (Pint, preset `laravel`) |
+| `composer lint` | checks the code style without changing files |
+| `composer format` | applies the code style (Pint, `laravel` preset) |
 | `composer analyse` | PHPStan |
 
-## Como trabalhar
+## How we work
 
-- **Teste primeiro.** Toda mudança de comportamento começa por um teste que falha. Os testes de análise usam fixtures de código PHP criadas na hora (veja `tests/TestCase.php`); classes de apoio ficam em `tests/Fixtures/`.
-- **Sinks e guards** são dados, não código: ficam em `config/idempotency-linter.php`. Para suportar um novo gateway, uma nova facade ou um novo encadeamento, comece pelo catálogo.
-- **Falso negativo silencioso é o pior defeito.** Se uma limitação nova aparecer, documente-a no README e fixe-a em `tests/Unit/Analysis/LimitationsTest.php`.
-- **Não execute o código analisado.** A análise é estática. A única exceção é o autoload usado para resolver hierarquia de classes (`ClassMatcher`).
-- Mensagens ao usuário, comentários e commits em português; nomes de classes e métodos em inglês.
+- **Test first.** Every behavior change starts with a failing test. The analysis tests use PHP code fixtures created on the fly (see `tests/TestCase.php`); supporting classes live in `tests/Fixtures/`.
+- **Sinks and guards** are data, not code: they live in `config/idempotency-linter.php`. To support a new gateway, a new facade or a new call chain, start with the catalog.
+- **A silent false negative is the worst kind of defect.** If a new limitation shows up, document it in the README and pin it in `tests/Unit/Analysis/LimitationsTest.php`.
+- **Never run the analyzed code.** The analysis is static. The only exception is the autoloading used to resolve class hierarchy (`ClassMatcher`, `ClassLocator`).
+- **Everything is written in English:** user-facing messages, code comments, documentation, commit messages and pull request descriptions.
 
 ## Pull requests
 
-- Um assunto por PR, com commits pequenos e descritivos (modo imperativo, em português).
-- Descreva o que muda, os pontos de atenção e como testar.
-- Atualize o `CHANGELOG.md` na seção da próxima versão e o README quando o comportamento visível mudar.
-- O CI precisa estar verde.
+- One topic per PR, with small, descriptive commits (imperative mood).
+- Describe what changes, the points that need attention and how to test it.
+- Update `CHANGELOG.md` under the next version and the README when visible behavior changes.
+- CI must be green.
 
-## Publicando uma versão (mantenedores)
+## Releasing a version (maintainers)
 
-1. Garanta que a `main` está verde e que o `CHANGELOG.md` está completo.
-2. Troque "não lançado" pela data da versão em `CHANGELOG.md`.
-3. Crie e publique a tag: `git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0`.
-4. Crie a release no GitHub a partir da tag, com o texto da seção do changelog.
-5. Na primeira versão, submeta o repositório em <https://packagist.org/packages/submit> e ative a atualização automática (webhook do GitHub).
+1. Make sure `main` is green and `CHANGELOG.md` is complete.
+2. Replace "Unreleased" with the version and date in `CHANGELOG.md`.
+3. Create and push the tag: `git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0`.
+4. Create the GitHub release from the tag, using the changelog section as its text.
+5. Packagist picks up the new tag through the GitHub webhook. For the very first version, submit the repository at <https://packagist.org/packages/submit> and enable auto-updating.

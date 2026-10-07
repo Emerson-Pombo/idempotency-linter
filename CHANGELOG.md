@@ -1,41 +1,52 @@
 # Changelog
 
-Todas as mudanças relevantes deste projeto são documentadas aqui.
+All notable changes to this project are documented here.
 
-O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [versionamento semântico](https://semver.org/lang/pt-BR/). Enquanto a versão for `0.x`, os catálogos de detecção e a saída podem mudar entre versões menores.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/). While the version is `0.x`, the detection catalogs and the output may change between minor versions.
 
-## [Não lançado]
+## [Unreleased]
 
-### Adicionado
+### Changed
 
-- A análise segue o código do projeto para fora da classe do job: serviços injetados com tipo concreto declarado (`$this->servico->metodo()`, parâmetros do `handle()` e chamadas estáticas a classes do projeto), métodos herdados da classe pai (`$this->metodo()`, `parent::metodo()` e `handle()` herdado) e métodos de traits do projeto, além de propriedades tipadas vindas do pai ou de traits.
-- O achado aponta o arquivo e a linha reais do sink, e a saída em texto passa a mostrar o job que o alcança (`Job: ...`).
+- **Breaking (output):** the whole project is now in English, for international use. This affects what users see:
+  - risk labels: `HIGH RISK`, `MEDIUM RISK` and `LOW RISK`;
+  - the text summary: `2 jobs analyzed, 1 at risk, 1 protected.`;
+  - the other command messages (invalid options, `Path not found`, `No jobs (ShouldQueue) found.`);
+  - the `message` of each finding, in text and JSON, which comes from the sink messages in the config.
+- If you published the config (`vendor:publish`), your copy keeps its old sink messages. Update them, or republish the config, to get the English ones.
+- Messages from the catalog validation exceptions are in English.
 
-### Limitações conhecidas
+### Added
 
-- Dependências tipadas por interface, serviços obtidos do container (`app(...)`) e classes de `vendor/` não são seguidos.
+- The analysis follows the project's code beyond the job class: injected services with a declared concrete type (`$this->service->method()`, `handle()` parameters and static calls to project classes), methods inherited from the parent class (`$this->method()`, `parent::method()` and an inherited `handle()`) and methods of project traits, plus typed properties coming from the parent or from traits.
+- A finding points to the real file and line of the sink, and the text output now shows the job that reaches it (`Job: ...`).
+
+### Known limitations
+
+- Dependencies typed by interface, services obtained from the container (`app(...)`) and classes from `vendor/` are not followed.
 
 ## [0.1.0] - 2026-10-07
 
-Primeira versão pública.
+First public release.
 
-### Adicionado
+### Added
 
-- Comando Artisan `idempotency:scan`, com `--fail-on=high|medium|low|none` para uso em CI e `--format=text|json`.
-- Localização de jobs `ShouldQueue`, inclusive os que herdam a interface de uma classe base (no mesmo arquivo ou carregável pelo autoload) e os que usam uma interface que estende `ShouldQueue`.
-- Motor de análise estática (via `nikic/php-parser`) a partir do `handle()`, seguindo métodos da própria classe (`$this->`, `self::` e `static::`, até 5 níveis).
-- Catálogo de sinks: pagamento, e-mail, notificação, HTTP com efeito colateral e inserção no banco.
-- Catálogo de guards: `Cache::lock`/`Cache::add`, `firstOrCreate`/`updateOrCreate`/`upsert`, chave de idempotência em arrays literais e `ShouldBeUnique` (proteção parcial, que reduz o risco em um nível).
-- Resolução de tipos declarados (propriedades, propriedades promovidas e parâmetros), de subclasses, interfaces e traits do catálogo (via autoload) e de encadeamentos declarados em `chains` (`Mail::to()->send()`, `Http::withToken()->post()`, `Notification::route()->notify()`).
-- Relatório de risco (alto, médio, baixo) com arquivo e linha exatos, em texto ou em JSON versionado.
-- Configuração publicável (`php artisan vendor:publish --tag=idempotency-linter-config`).
-- Compatível com Laravel 10, 11, 12 e 13 (PHP 8.1 ou superior; o Laravel 13 exige PHP 8.3). CI com testes em PHP 8.1 a 8.3, Pint e PHPStan (nível 6).
+- The `idempotency:scan` Artisan command, with `--fail-on=high|medium|low|none` for CI use and `--format=text|json`.
+- Discovery of `ShouldQueue` jobs, including those that inherit the interface from a base class (in the same file or loadable through the autoloader) and those that use an interface extending `ShouldQueue`.
+- Static analysis engine (via `nikic/php-parser`) starting at `handle()`, following the class's own methods (`$this->`, `self::` and `static::`, up to 5 levels).
+- Sink catalog: payment, email, notification, HTTP with side effects and database insert.
+- Guard catalog: `Cache::lock`/`Cache::add`, `firstOrCreate`/`updateOrCreate`/`upsert`, idempotency key in literal arrays and `ShouldBeUnique` (partial protection, which lowers the risk by one level).
+- Resolution of declared types (properties, promoted properties and parameters), of subclasses, interfaces and traits from the catalog (through the autoloader) and of chains declared in `chains` (`Mail::to()->send()`, `Http::withToken()->post()`, `Notification::route()->notify()`).
+- Risk report (high, medium, low) with the exact file and line, as text or as versioned JSON.
+- Publishable configuration (`php artisan vendor:publish --tag=idempotency-linter-config`).
+- Compatible with Laravel 10, 11, 12 and 13 (PHP 8.1 or higher; Laravel 13 requires PHP 8.3). CI runs the tests on PHP 8.1 to 8.3, plus Pint and PHPStan (level 6).
 
-### Limitações conhecidas
+### Known limitations
 
-- Não segue serviços injetados, métodos herdados de uma classe pai em outro arquivo nem traits.
-- Sem inferência de tipos: variáveis locais, propriedades sem tipo e encadeamentos fora do catálogo `chains` são ignorados.
-- Um guard conta pela ordem de execução, não pelo fluxo de controle (um guard dentro de um `if` sem relação com o sink protege o sink mesmo assim).
-- O autoload do projeto analisado é usado para resolver hierarquia de classes.
+- It does not follow injected services, methods inherited from a parent class in another file, or traits.
+- No type inference: local variables, untyped properties and chains outside the `chains` catalog are ignored.
+- A guard counts by execution order, not by control flow (a guard inside an unrelated `if` still protects the sink).
+- The analyzed project's autoloader is used to resolve class hierarchy.
 
+[Unreleased]: https://github.com/Emerson-Pombo/idempotency-linter/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Emerson-Pombo/idempotency-linter/releases/tag/v0.1.0

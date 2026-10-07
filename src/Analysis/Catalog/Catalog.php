@@ -8,7 +8,7 @@ use IdempotencyLinter\Report\RiskLevel;
 use InvalidArgumentException;
 
 /**
- * Catálogos de sinks e guards, lidos de config/idempotency-linter.php.
+ * Sink and guard catalogs, read from config/idempotency-linter.php.
  */
 final class Catalog
 {
@@ -30,7 +30,7 @@ final class Catalog
 
         foreach ($config['sinks'] ?? [] as $name => $sink) {
             $risk = RiskLevel::tryFrom((string) ($sink['risk'] ?? ''))
-                ?? throw new InvalidArgumentException("Risco inválido no sink '{$name}': ".($sink['risk'] ?? '(vazio)'));
+                ?? throw new InvalidArgumentException("Invalid risk in sink '{$name}': ".($sink['risk'] ?? '(empty)'));
 
             $sinks[] = new Sink(
                 name: (string) $name,

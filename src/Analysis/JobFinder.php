@@ -18,12 +18,13 @@ use RecursiveIteratorIterator;
 use SplFileInfo;
 
 /**
- * Localiza classes que implementam a interface de job (ShouldQueue por padrão).
+ * Finds classes that implement the job interface (ShouldQueue by default).
  *
- * Uma classe é job quando implementa a interface de job, diretamente ou por uma
- * interface que a estende, ou quando herda de uma classe que é job. Pais no mesmo
- * arquivo são resolvidos pelo AST; pais em outros arquivos, pelo autoload (sem
- * instanciar nada). Pai que não carrega não torna a classe um job.
+ * A class is a job when it implements the job interface, directly or through an
+ * interface that extends it, or when it inherits from a class that is a job.
+ * Parents in the same file are resolved from the AST; parents in other files,
+ * through the autoloader (without instantiating anything). A parent that fails
+ * to load does not make the class a job.
  */
 final class JobFinder
 {
@@ -39,7 +40,7 @@ final class JobFinder
     }
 
     /**
-     * @param  list<string>  $paths  arquivos ou diretórios
+     * @param  list<string>  $paths  files or directories
      * @return list<string>
      */
     public function phpFiles(array $paths): array
@@ -78,7 +79,7 @@ final class JobFinder
     /**
      * @return list<JobClass>
      *
-     * @throws ParserError quando o arquivo tem erro de sintaxe
+     * @throws ParserError when the file has a syntax error
      */
     public function findInFile(string $file): array
     {
@@ -109,7 +110,7 @@ final class JobFinder
 
         foreach ($classes as $class) {
             if ($class->name === null) {
-                continue; // classe anônima
+                continue; // anonymous class
             }
 
             if (! $this->isJob($class, $declared)) {
@@ -134,8 +135,8 @@ final class JobFinder
     }
 
     /**
-     * @param  array<string, Class_>  $declared  classes nomeadas do arquivo, por nome completo em minúsculas
-     * @param  array<string, true>  $seen  para não entrar em loop em heranças cíclicas
+     * @param  array<string, Class_>  $declared  named classes in the file, keyed by lowercase full name
+     * @param  array<string, true>  $seen  to avoid looping on cyclic inheritance
      */
     private function isJob(Class_ $class, array $declared, array $seen = []): bool
     {
@@ -166,8 +167,8 @@ final class JobFinder
     }
 
     /**
-     * Interfaces declaradas na classe e nos ancestrais do mesmo arquivo. Ancestrais
-     * de outros arquivos ficam por conta de {@see JobClass::$parent}.
+     * Interfaces declared on the class and on ancestors in the same file. Ancestors
+     * in other files are covered by {@see JobClass::$parent}.
      *
      * @param  array<string, Class_>  $declared
      * @param  array<string, true>  $seen

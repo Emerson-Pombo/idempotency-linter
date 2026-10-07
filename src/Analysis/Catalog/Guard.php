@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace IdempotencyLinter\Analysis\Catalog;
 
-/** Proteção contra reexecução. Quando "partial", apenas reduz o risco. */
+/** Protection against re-execution. When "partial", it only lowers the risk. */
 final class Guard
 {
     /** @param list<MatchRule> $rules */

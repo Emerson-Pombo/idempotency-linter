@@ -7,8 +7,8 @@ namespace IdempotencyLinter\Analysis;
 use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 
 /**
- * Placeholder até o motor de sinks/guards existir: não reporta nada.
- * Será substituído no binding do ServiceProvider.
+ * Placeholder from before the sink/guard engine existed: it reports nothing.
+ * It was replaced in the ServiceProvider binding.
  */
 final class NullAnalyzer implements JobAnalyzer
 {

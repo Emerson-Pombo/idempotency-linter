@@ -17,12 +17,12 @@ use ReflectionClass;
 use Throwable;
 
 /**
- * Localiza o código-fonte de classes e traits do projeto.
+ * Locates the source code of the project's classes and traits.
  *
- * Procura primeiro no arquivo de origem (classes do mesmo arquivo) e depois pelo
- * autoload (`ReflectionClass::getFileName`), sem instanciar nada. Classes de
- * `vendor/`, internas do PHP, interfaces e enums nunca são localizadas. Cada
- * arquivo é lido uma vez.
+ * It looks first in the originating file (classes in the same file) and then
+ * through the autoloader (`ReflectionClass::getFileName`), without instantiating
+ * anything. Classes from `vendor/`, PHP internals, interfaces and enums are never
+ * located. Each file is read once.
  */
 final class ClassLocator
 {

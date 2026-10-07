@@ -19,10 +19,9 @@ use IdempotencyLinter\Analysis\Matching\RuleMatcher;
 use IdempotencyLinter\Report\Finding;
 
 /**
- * Reporta sinks do catálogo sem guard anterior no método de entrada do job.
- *
- * Limitação (v1): só analisa o corpo do método de entrada, sem seguir métodos
- * privados nem serviços injetados.
+ * Reports catalog sinks that have no earlier guard in the job's entry method,
+ * following the project's own code (own methods, injected services, parent
+ * classes and traits) from there.
  */
 final class SinkGuardAnalyzer implements JobAnalyzer
 {
@@ -68,7 +67,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
                 continue;
             }
 
-            // Um método seguido a partir de vários pontos gera um achado só.
+            // A method followed from several call sites produces a single finding.
             $key = $call->file.'|'.$call->line.'|'.$sink->name;
 
             if (isset($reported[$key])) {
@@ -84,7 +83,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
                     continue;
                 }
 
-                $message .= ' Proteção parcial detectada, que não cobre retry nem reentrega: o risco foi reduzido.';
+                $message .= ' Partial protection detected, which does not cover retries or redelivery: the risk was lowered.';
             }
 
             $reported[$key] = true;
@@ -102,7 +101,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
         return $findings;
     }
 
-    /** Sinks e guards do catálogo são tratados como folhas: não se segue o código por dentro deles. */
+    /** Catalog sinks and guards are treated as leaves: their inner code is not followed. */
     private function isLeaf(Call $call): bool
     {
         if ($this->sinkFor($call) !== null) {
@@ -146,7 +145,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
         }));
     }
 
-    /** Guard do tipo "interface": vale para o job inteiro, não para uma chamada. */
+    /** "interface" guard: applies to the whole job, not to a single call. */
     private function guardOfJob(JobClass $job, bool $partial): ?string
     {
         foreach ($this->catalog->guards as $guard) {
@@ -176,9 +175,9 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     }
 
     /**
-     * Um guard só protege o que vem depois dele na ordem de execução. Arrays
-     * literais (chave de idempotência) também protegem a chamada que os recebe
-     * como argumento, que começa antes deles.
+     * A guard only protects what comes after it in execution order. Literal
+     * arrays (idempotency key) also protect the call that receives them as an
+     * argument, which starts before them.
      *
      * @param  list<Call>  $guardCalls
      */

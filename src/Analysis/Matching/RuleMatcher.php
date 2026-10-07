@@ -7,7 +7,7 @@ namespace IdempotencyLinter\Analysis\Matching;
 use IdempotencyLinter\Analysis\Catalog\MatchRule;
 
 /**
- * Casa uma regra do catálogo com uma chamada coletada.
+ * Matches a catalog rule against a collected call.
  */
 final class RuleMatcher
 {

@@ -1,6 +1,6 @@
 {
     "name": "emerson-pombo/idempotency-linter",
-    "description": "Analisador estático que identifica jobs de fila Laravel sem proteção contra reexecução (idempotência) antes que virem incidentes de produção.",
+    "description": "Static analyzer that finds Laravel queue jobs without protection against re-execution (idempotency) before they become production incidents.",
     "keywords": [
         "laravel",
         "queue",

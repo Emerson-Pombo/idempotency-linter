@@ -6,5 +6,5 @@ namespace IdempotencyLinter\Tests\Fixtures\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 
-/** Base de jobs em outro arquivo, resolvida pelo autoload. */
+/** Job base in another file, resolved through the autoloader. */
 abstract class BaseQueuedJob implements ShouldQueue {}
