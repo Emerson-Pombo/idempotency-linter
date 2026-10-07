@@ -211,4 +211,28 @@ final class SinkGuardAnalyzerTest extends TestCase
 
         $this->assertSame([], $this->analyze($this->job("Cache::add('k', 1);\n\$this->charges->create([]);", $extra)));
     }
+
+    public function test_flags_static_call_on_model_subclass(): void
+    {
+        $findings = $this->analyze($this->job('\\IdempotencyLinter\\Tests\\Fixtures\\Models\\Invoice::create([]);'));
+
+        $this->assertSame(['database_insert'], array_map(fn ($f) => $f->sink, $findings));
+        $this->assertSame(RiskLevel::Low, $findings[0]->risk);
+    }
+
+    public function test_upsert_on_model_subclass_counts_as_guard(): void
+    {
+        $invoice = '\\IdempotencyLinter\\Tests\\Fixtures\\Models\\Invoice';
+
+        $this->assertSame([], $this->analyze($this->job("{$invoice}::firstOrCreate(['id' => 1]);\nMail::send(\$m);")));
+    }
+
+    public function test_flags_method_call_through_trait_of_declared_type(): void
+    {
+        $extra = 'public function __construct(private \\IdempotencyLinter\\Tests\\Fixtures\\Models\\VipCustomer $customer) {}';
+
+        $findings = $this->analyze($this->job('$this->customer->notify($n);', $extra));
+
+        $this->assertSame(['notification'], array_map(fn ($f) => $f->sink, $findings));
+    }
 }
