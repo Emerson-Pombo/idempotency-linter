@@ -311,9 +311,9 @@ final class ScanCommandTest extends TestCase
             ->assertExitCode(1);
     }
 
-    public function test_scan_reports_sink_in_injected_service_with_its_file_and_the_job(): void
+    private function injectedServiceJob(): string
     {
-        $file = $this->fixture('Cobrar.php', <<<'PHP'
+        return $this->fixture('Cobrar.php', <<<'PHP'
         <?php
         namespace App\Jobs;
 
@@ -327,16 +327,26 @@ final class ScanCommandTest extends TestCase
             }
         }
         PHP);
-        $service = (new \ReflectionClass(Notifier::class))->getFileName();
+    }
 
-        $this->artisan('idempotency:scan', ['paths' => [$file]])
-            ->expectsOutputToContain($service.':15')
+    private function notifierFile(): string
+    {
+        return (string) (new \ReflectionClass(Notifier::class))->getFileName();
+    }
+
+    public function test_scan_text_reports_sink_in_injected_service_with_its_file_and_the_job(): void
+    {
+        $this->artisan('idempotency:scan', ['paths' => [$this->injectedServiceJob()]])
+            ->expectsOutputToContain($this->notifierFile().':15')
             ->expectsOutputToContain('Job: App\Jobs\Cobrar')
             ->assertExitCode(1);
+    }
 
-        [, $report] = $this->scanJson(['paths' => [$file]]);
+    public function test_scan_json_reports_sink_in_injected_service_with_its_file_and_the_job(): void
+    {
+        [, $report] = $this->scanJson(['paths' => [$this->injectedServiceJob()]]);
 
-        $this->assertSame($service, $report['findings'][0]['file']);
+        $this->assertSame($this->notifierFile(), $report['findings'][0]['file']);
         $this->assertSame('App\Jobs\Cobrar', $report['findings'][0]['job']);
     }
 }
