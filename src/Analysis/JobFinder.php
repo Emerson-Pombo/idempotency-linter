@@ -31,11 +31,11 @@ final class JobFinder
         private readonly string $entryMethod = 'handle',
         ?Parser $parser = null,
     ) {
-        $this->parser = $parser ?? (new ParserFactory())->createForNewestSupportedVersion();
+        $this->parser = $parser ?? (new ParserFactory)->createForNewestSupportedVersion();
     }
 
     /**
-     * @param list<string> $paths arquivos ou diretórios
+     * @param  list<string>  $paths  arquivos ou diretórios
      * @return list<string>
      */
     public function phpFiles(array $paths): array
@@ -45,6 +45,7 @@ final class JobFinder
         foreach ($paths as $path) {
             if (is_file($path)) {
                 $files[] = $path;
+
                 continue;
             }
 
@@ -85,12 +86,12 @@ final class JobFinder
 
         $ast = $this->parser->parse($code) ?? [];
 
-        $traverser = new NodeTraverser();
-        $traverser->addVisitor(new NameResolver());
+        $traverser = new NodeTraverser;
+        $traverser->addVisitor(new NameResolver);
         $ast = $traverser->traverse($ast);
 
         /** @var list<Class_> $classes */
-        $classes = (new NodeFinder())->findInstanceOf($ast, Class_::class);
+        $classes = (new NodeFinder)->findInstanceOf($ast, Class_::class);
 
         $jobs = [];
 

@@ -25,7 +25,8 @@ final class ScanCommandTest extends TestCase
 
     private function bindFindingWith(RiskLevel $risk): void
     {
-        $this->app->bind(JobAnalyzer::class, fn () => new class($risk) implements JobAnalyzer {
+        $this->app->bind(JobAnalyzer::class, fn () => new class($risk) implements JobAnalyzer
+        {
             public function __construct(private readonly RiskLevel $risk) {}
 
             public function analyze(JobClass $job): array

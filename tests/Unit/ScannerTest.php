@@ -28,7 +28,7 @@ final class ScannerTest extends TestCase
         $this->fixture('A.php', sprintf(self::JOB, 'A'));
         $this->fixture('B.php', sprintf(self::JOB, 'B'));
 
-        $result = (new Scanner(new JobFinder(), new NullAnalyzer()))->scan([$this->fixtureDir()]);
+        $result = (new Scanner(new JobFinder, new NullAnalyzer))->scan([$this->fixtureDir()]);
 
         $this->assertSame(2, $result->jobCount());
         $this->assertSame([], $result->findings());
@@ -39,7 +39,7 @@ final class ScannerTest extends TestCase
         $broken = $this->fixture('A_broken.php', "<?php\nclass {");
         $this->fixture('B.php', sprintf(self::JOB, 'B'));
 
-        $result = (new Scanner(new JobFinder(), new NullAnalyzer()))->scan([$this->fixtureDir()]);
+        $result = (new Scanner(new JobFinder, new NullAnalyzer))->scan([$this->fixtureDir()]);
 
         $this->assertSame(1, $result->jobCount());
         $this->assertCount(1, $result->errors());
@@ -50,14 +50,15 @@ final class ScannerTest extends TestCase
     {
         $file = $this->fixture('A.php', sprintf(self::JOB, 'A'));
 
-        $analyzer = new class implements JobAnalyzer {
+        $analyzer = new class implements JobAnalyzer
+        {
             public function analyze(JobClass $job): array
             {
                 return [new Finding($job->file, $job->line, $job->className, 'mail', RiskLevel::Medium, 'x')];
             }
         };
 
-        $result = (new Scanner(new JobFinder(), $analyzer))->scan([$file]);
+        $result = (new Scanner(new JobFinder, $analyzer))->scan([$file]);
 
         $this->assertCount(1, $result->findings());
         $this->assertSame(1, $result->riskyJobCount());

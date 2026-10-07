@@ -19,14 +19,13 @@ use PhpParser\Node\NullableType;
 final class TypeMap
 {
     /**
-     * @param array<string, string> $properties
-     * @param array<string, string> $variables
+     * @param  array<string, string>  $properties
+     * @param  array<string, string>  $variables
      */
     private function __construct(
         private readonly array $properties,
         private readonly array $variables,
-    ) {
-    }
+    ) {}
 
     public static function forJob(JobClass $job): self
     {

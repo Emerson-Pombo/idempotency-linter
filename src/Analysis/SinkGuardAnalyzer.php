@@ -31,7 +31,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
 
     public function __construct(
         private readonly Catalog $catalog,
-        private readonly ClassMatcher $classes = new ClassMatcher(),
+        private readonly ClassMatcher $classes = new ClassMatcher,
         ?RuleMatcher $matcher = null,
         ?CallCollector $collector = null,
     ) {
@@ -97,7 +97,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     }
 
     /**
-     * @param list<Call> $calls
+     * @param  list<Call>  $calls
      * @return list<Call>
      */
     private function guardCalls(array $calls, bool $partial): array
@@ -147,7 +147,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
      * literais (chave de idempotência) também protegem a chamada que os recebe
      * como argumento, que começa antes deles.
      *
-     * @param list<Call> $guardCalls
+     * @param  list<Call>  $guardCalls
      */
     private function isProtected(Call $sink, array $guardCalls): bool
     {

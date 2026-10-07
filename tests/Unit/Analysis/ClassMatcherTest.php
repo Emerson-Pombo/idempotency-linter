@@ -18,22 +18,22 @@ final class ClassMatcherTest extends TestCase
 {
     public function test_matches_same_class_ignoring_case_and_leading_backslash(): void
     {
-        $this->assertTrue((new ClassMatcher())->matches('\illuminate\database\eloquent\model', Model::class));
+        $this->assertTrue((new ClassMatcher)->matches('\illuminate\database\eloquent\model', Model::class));
     }
 
     public function test_matches_subclass(): void
     {
-        $this->assertTrue((new ClassMatcher())->matches(Invoice::class, Model::class));
+        $this->assertTrue((new ClassMatcher)->matches(Invoice::class, Model::class));
     }
 
     public function test_matches_implemented_interface(): void
     {
-        $this->assertTrue((new ClassMatcher())->matches(Model::class, ArrayAccess::class));
+        $this->assertTrue((new ClassMatcher)->matches(Model::class, ArrayAccess::class));
     }
 
     public function test_matches_trait_used_by_class_or_parent(): void
     {
-        $matcher = new ClassMatcher();
+        $matcher = new ClassMatcher;
 
         $this->assertTrue($matcher->matches(Customer::class, Notifiable::class));
         $this->assertTrue($matcher->matches(VipCustomer::class, Notifiable::class));
@@ -41,12 +41,12 @@ final class ClassMatcherTest extends TestCase
 
     public function test_does_not_match_unrelated_classes(): void
     {
-        $this->assertFalse((new ClassMatcher())->matches(Invoice::class, Customer::class));
+        $this->assertFalse((new ClassMatcher)->matches(Invoice::class, Customer::class));
     }
 
     public function test_unknown_class_does_not_match_and_does_not_fail(): void
     {
-        $matcher = new ClassMatcher();
+        $matcher = new ClassMatcher;
 
         $this->assertFalse($matcher->matches('Nao\Existe', Model::class));
         $this->assertFalse($matcher->matches(Invoice::class, 'Nao\Existe'));
@@ -63,7 +63,7 @@ final class ClassMatcherTest extends TestCase
         spl_autoload_register($loader);
 
         try {
-            $this->assertFalse((new ClassMatcher())->matches('Explode\Thrower', Model::class));
+            $this->assertFalse((new ClassMatcher)->matches('Explode\Thrower', Model::class));
         } finally {
             spl_autoload_unregister($loader);
         }

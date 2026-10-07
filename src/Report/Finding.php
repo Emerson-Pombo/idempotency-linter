@@ -16,6 +16,5 @@ final class Finding
         public readonly string $sink,
         public readonly RiskLevel $risk,
         public readonly string $message,
-    ) {
-    }
+    ) {}
 }

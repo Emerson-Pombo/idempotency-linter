@@ -24,7 +24,7 @@ final class JobFinderTest extends TestCase
         }
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertSame('App\Jobs\SendInvoice', $jobs[0]->className);
@@ -44,7 +44,7 @@ final class JobFinderTest extends TestCase
         }
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertSame('Job', $jobs[0]->className);
@@ -59,7 +59,7 @@ final class JobFinderTest extends TestCase
         class Plain { public function handle(): void {} }
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_ignores_anonymous_classes(): void
@@ -71,7 +71,7 @@ final class JobFinderTest extends TestCase
         };
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_entry_method_is_null_when_missing(): void
@@ -81,7 +81,7 @@ final class JobFinderTest extends TestCase
         class NoHandle implements \Illuminate\Contracts\Queue\ShouldQueue {}
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertNull($jobs[0]->entryMethod);
@@ -111,7 +111,7 @@ final class JobFinderTest extends TestCase
         class Child extends BaseJob {}
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_throws_on_syntax_error(): void
@@ -120,7 +120,7 @@ final class JobFinderTest extends TestCase
 
         $this->expectException(ParserError::class);
 
-        (new JobFinder())->findInFile($file);
+        (new JobFinder)->findInFile($file);
     }
 
     public function test_php_files_lists_sorted_unique_php_files_only(): void
@@ -129,7 +129,7 @@ final class JobFinderTest extends TestCase
         $a = $this->fixture('a.php', '<?php');
         $this->fixture('notes.txt', 'x');
 
-        $files = (new JobFinder())->phpFiles([$this->fixtureDir(), $a, '/caminho/inexistente']);
+        $files = (new JobFinder)->phpFiles([$this->fixtureDir(), $a, '/caminho/inexistente']);
 
         $this->assertSame([$a, $b], $files);
     }
