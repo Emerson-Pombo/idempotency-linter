@@ -2,7 +2,7 @@
 
 Pacote Composer para Laravel que analisa estaticamente classes `Job` de fila (`ShouldQueue`) e identifica jobs que executam efeitos colaterais sensíveis a duplicação — cobranças, envio de e-mail, inserções no banco — sem qualquer proteção contra reexecução.
 
-> ⚠️ **Status: em desenvolvimento inicial (pré-alfa).** A API, o comando Artisan e os catálogos de detecção ainda vão mudar bastante. Não use em produção ainda.
+> ⚠️ **Status: pré-lançamento (0.x).** O motor de análise, o comando Artisan e a saída JSON já funcionam, mas o formato dos catálogos de detecção ainda pode mudar entre versões 0.x. Veja o [CHANGELOG](CHANGELOG.md). Use como ferramenta de desenvolvimento e CI, não como dependência de produção.
 
 ## O problema
 
@@ -62,7 +62,20 @@ Para resolver subclasses e traits, o linter carrega as classes do seu projeto pe
 
 ## Instalação
 
-Ainda não publicado no Packagist. Em breve.
+Requer PHP 8.1 ou superior e Laravel 10, 11 ou 12.
+
+```bash
+composer require --dev emerson-pombo/idempotency-linter
+```
+
+O pacote ainda não está no Packagist. Enquanto isso, instale direto do repositório:
+
+```bash
+composer config repositories.idempotency-linter vcs https://github.com/Emerson-Pombo/idempotency-linter
+composer require --dev emerson-pombo/idempotency-linter:dev-main
+```
+
+O ServiceProvider é registrado automaticamente (auto-discovery do Laravel).
 
 ## Uso
 
@@ -152,7 +165,7 @@ O CI roda os testes em PHP 8.1 a 8.3 com Laravel 10, 11 e 12 (combinações comp
 
 ## Contribuindo
 
-Projeto em estágio inicial — issues e discussões são bem-vindas. Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues e discussões são bem-vindas. Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licença
 

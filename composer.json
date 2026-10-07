@@ -10,6 +10,7 @@
         "linter"
     ],
     "license": "MIT",
+    "homepage": "https://github.com/Emerson-Pombo/idempotency-linter",
     "type": "library",
     "authors": [
         {
@@ -17,6 +18,10 @@
             "email": "emersonpombo5@gmail.com"
         }
     ],
+    "support": {
+        "issues": "https://github.com/Emerson-Pombo/idempotency-linter/issues",
+        "source": "https://github.com/Emerson-Pombo/idempotency-linter"
+    },
     "require": {
         "php": "^8.1",
         "illuminate/support": "^10.0|^11.0|^12.0",
