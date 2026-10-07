@@ -7,7 +7,7 @@ namespace IdempotencyLinter\Tests\Fixtures\Services;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Mail;
 
-/** Base que traz o próprio handle(). */
+/** Base that brings its own handle(). */
 abstract class BaseWithHandle implements ShouldQueue
 {
     public function handle(): void

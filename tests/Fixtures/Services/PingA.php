@@ -6,7 +6,7 @@ namespace IdempotencyLinter\Tests\Fixtures\Services;
 
 use Illuminate\Support\Facades\Mail;
 
-/** Par com dependência circular, para testar proteção contra recursão. */
+/** Half of a circular dependency pair, used to test recursion protection. */
 class PingA
 {
     public function __construct(private PingB $b) {}

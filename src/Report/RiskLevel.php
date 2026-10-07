@@ -13,9 +13,9 @@ enum RiskLevel: string
     public function label(): string
     {
         return match ($this) {
-            self::High => 'ALTO RISCO',
-            self::Medium => 'MÉDIO RISCO',
-            self::Low => 'BAIXO RISCO',
+            self::High => 'HIGH RISK',
+            self::Medium => 'MEDIUM RISK',
+            self::Low => 'LOW RISK',
         };
     }
 
@@ -37,7 +37,7 @@ enum RiskLevel: string
         };
     }
 
-    /** Um nível abaixo, ou null quando já é o menor. */
+    /** One level down, or null when it is already the lowest. */
     public function lower(): ?self
     {
         return match ($this) {

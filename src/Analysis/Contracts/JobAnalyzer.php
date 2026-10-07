@@ -8,7 +8,7 @@ use IdempotencyLinter\Analysis\JobClass;
 use IdempotencyLinter\Report\Finding;
 
 /**
- * Recebe um job e devolve os efeitos colaterais desprotegidos encontrados.
+ * Takes a job and returns the unprotected side effects found in it.
  */
 interface JobAnalyzer
 {

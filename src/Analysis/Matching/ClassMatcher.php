@@ -7,12 +7,13 @@ namespace IdempotencyLinter\Analysis\Matching;
 use Throwable;
 
 /**
- * Decide se uma classe encontrada no código corresponde a uma classe, interface
- * ou trait do catálogo.
+ * Decides whether a class found in the code matches a catalog class, interface
+ * or trait.
  *
  * Nomes iguais casam direto. Para subclasses, interfaces e traits o matcher usa
- * o autoload do projeto analisado (`is_a`, `class_uses`), sem instanciar nada e
- * sem `include` manual. Classe que não carrega simplesmente não casa.
+ * the analyzed project's autoloader (`is_a`, `class_uses`), without instantiating
+ * anything and without manual `include`. A class that fails to load simply does
+ * not match.
  */
 final class ClassMatcher
 {
@@ -59,7 +60,7 @@ final class ClassMatcher
         return false;
     }
 
-    /** @return list<string> traits da classe, incluindo as usadas por outras traits */
+    /** @return list<string> traits of the class, including those used by other traits */
     private function traitsOf(string $class): array
     {
         $traits = [];

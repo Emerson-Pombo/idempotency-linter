@@ -6,7 +6,7 @@ namespace IdempotencyLinter\Tests\Fixtures\Models;
 
 use Illuminate\Notifications\Notifiable;
 
-/** Usa a trait Notifiable, usada para testar a resolução de traits. */
+/** Uses the Notifiable trait, to test trait resolution. */
 class Customer
 {
     use Notifiable;

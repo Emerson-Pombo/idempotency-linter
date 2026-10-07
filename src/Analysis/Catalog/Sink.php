@@ -6,7 +6,7 @@ namespace IdempotencyLinter\Analysis\Catalog;
 
 use IdempotencyLinter\Report\RiskLevel;
 
-/** Chamada com efeito colateral sensível a duplicação. */
+/** A call with a side effect that is sensitive to duplication. */
 final class Sink
 {
     /** @param list<MatchRule> $rules */

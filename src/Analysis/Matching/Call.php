@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Analysis\Matching;
 
 /**
- * Uma chamada (ou array literal) encontrada no fluxo de execução do job.
+ * A call (or array literal) found in the job's execution flow.
  *
- * "order" é a posição da chamada na ordem de execução (visita em pré-ordem, com
- * o corpo dos métodos seguidos inserido no ponto da chamada). "lastOrder" é a
- * ordem do último nó dentro dela, o que permite saber se outra chamada está nos
- * seus argumentos.
+ * "order" is the call's position in execution order (pre-order visit, with the
+ * body of followed methods inserted at the call site). "lastOrder" is the order
+ * of the last node inside it, which tells whether another call is among its
+ * arguments.
  */
 final class Call
 {
     /**
-     * @param  ?string  $class  classe da chamada estática ou tipo do receptor
-     * @param  list<string>  $keys  chaves string literais (só para arrays)
+     * @param  ?string  $class  class of the static call, or the receiver's type
+     * @param  list<string>  $keys  literal string keys (arrays only)
      */
     public function __construct(
         public readonly CallKind $kind,

@@ -17,9 +17,9 @@ jobs:
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
     runs-on: ubuntu-latest
     env:
-      # As linhas 10 e 11 do Laravel têm avisos de segurança conhecidos e o Composer
-      # bloqueia a instalação por padrão. Aqui elas são instaladas de propósito, só
-      # para testar a compatibilidade do pacote.
+      # Laravel 10 and 11 have known security advisories, and Composer blocks
+      # installing them by default. They are installed here on purpose, only to
+      # test the package's compatibility.
       COMPOSER_NO_SECURITY_BLOCKING: '1'
     strategy:
       fail-fast: false
@@ -37,43 +37,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instala o PHP
+      - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, mbstring, tokenizer, xml, xmlwriter
           coverage: none
 
-      - name: Fixa a versão do Laravel (via Testbench)
+      - name: Pin the Laravel version (via Testbench)
         run: >
           composer require --dev "orchestra/testbench:${{ matrix.testbench }}"
           --no-interaction --no-update
 
-      - name: Instala as dependências
+      - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
 
-      - name: Roda os testes
+      - name: Run the tests
         run: vendor/bin/phpunit
 
   quality:
-    name: Estilo e análise estática
+    name: Code style and static analysis
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instala o PHP
+      - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: dom, mbstring, tokenizer, xml, xmlwriter
           coverage: none
 
-      - name: Instala as dependências
+      - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
 
-      - name: Estilo (Pint)
+      - name: Code style (Pint)
         run: composer lint
 
-      - name: Análise estática (PHPStan)
+      - name: Static analysis (PHPStan)
         run: composer analyse

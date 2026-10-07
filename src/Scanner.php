@@ -10,7 +10,7 @@ use IdempotencyLinter\Report\ScanResult;
 use PhpParser\Error as ParserError;
 
 /**
- * Orquestra: localizar arquivos → encontrar jobs → analisar cada um.
+ * Orchestrates: locate files → find jobs → analyze each one.
  */
 final class Scanner
 {

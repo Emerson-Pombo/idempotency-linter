@@ -7,7 +7,7 @@ namespace IdempotencyLinter\Tests\Fixtures\Services;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Mail;
 
-/** Base com helper protegido, usado por jobs filhos via $this->mailFromParent(). */
+/** Base with a protected helper, used by child jobs through $this->mailFromParent(). */
 abstract class BaseWithHelper implements ShouldQueue
 {
     protected function mailFromParent(): void

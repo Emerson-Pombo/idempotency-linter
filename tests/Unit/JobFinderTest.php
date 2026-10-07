@@ -108,7 +108,7 @@ final class JobFinderTest extends TestCase
     {
         $file = $this->fixture('Child.php', <<<'PHP'
         <?php
-        class Child extends BaseJobDesconhecida {}
+        class Child extends UnknownBaseJob {}
         PHP);
 
         $this->assertSame([], (new JobFinder)->findInFile($file));
@@ -194,7 +194,7 @@ final class JobFinderTest extends TestCase
         $a = $this->fixture('a.php', '<?php');
         $this->fixture('notes.txt', 'x');
 
-        $files = (new JobFinder)->phpFiles([$this->fixtureDir(), $a, '/caminho/inexistente']);
+        $files = (new JobFinder)->phpFiles([$this->fixtureDir(), $a, '/path/does-not-exist']);
 
         $this->assertSame([$a, $b], $files);
     }

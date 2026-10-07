@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Report;
 
 /**
- * Um efeito colateral desprotegido encontrado dentro de um job.
+ * An unprotected side effect found inside a job.
  */
 final class Finding
 {

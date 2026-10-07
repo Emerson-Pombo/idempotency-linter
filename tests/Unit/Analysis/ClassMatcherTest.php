@@ -48,15 +48,15 @@ final class ClassMatcherTest extends TestCase
     {
         $matcher = new ClassMatcher;
 
-        $this->assertFalse($matcher->matches('Nao\Existe', Model::class));
-        $this->assertFalse($matcher->matches(Invoice::class, 'Nao\Existe'));
+        $this->assertFalse($matcher->matches('Does\NotExist', Model::class));
+        $this->assertFalse($matcher->matches(Invoice::class, 'Does\NotExist'));
     }
 
     public function test_failing_autoload_does_not_match_and_does_not_fail(): void
     {
         $loader = static function (string $class): void {
             if ($class === 'Explode\Thrower') {
-                throw new RuntimeException('autoload quebrado');
+                throw new RuntimeException('broken autoload');
             }
         };
 

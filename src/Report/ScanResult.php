@@ -39,7 +39,7 @@ final class ScanResult
     }
 
     /**
-     * Findings ordenados por risco (maior primeiro), depois arquivo e linha.
+     * Findings sorted by risk (highest first), then by file and line.
      *
      * @return list<Finding>
      */

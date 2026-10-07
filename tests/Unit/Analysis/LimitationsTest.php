@@ -7,8 +7,8 @@ namespace IdempotencyLinter\Tests\Unit\Analysis;
 use IdempotencyLinter\Tests\TestCase;
 
 /**
- * Fixa o que a v1 NÃO faz. Se uma destas limitações for removida, o teste
- * correspondente deve falhar de propósito e ser atualizado junto com o README.
+ * Pins down what v1 does NOT do. If one of these limitations is removed, the
+ * matching test should fail on purpose and be updated together with the README.
  */
 final class LimitationsTest extends TestCase
 {

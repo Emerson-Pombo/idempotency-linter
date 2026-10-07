@@ -14,14 +14,13 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Stmt\Class_;
 
 /**
- * Coleta, em ordem de execução, as chamadas do método de entrada.
+ * Collects, in execution order, the calls of the entry method.
  *
- * Chamadas a métodos do projeto são seguidas: o corpo do método é inserido no
- * ponto da chamada, até MAX_DEPTH níveis e sem repetir um método que já está na
- * pilha. Seguem-se `$this->m()`, `self::m()`, `static::m()`, `parent::m()`,
- * `$servico->m()` (tipo concreto declarado) e `ClasseDoProjeto::m()`. Chamadas
- * que o chamador considera "folha" (sinks e guards do catálogo) não são
- * expandidas.
+ * Calls to project methods are followed: the method body is inserted at the call
+ * site, up to MAX_DEPTH levels and without repeating a method that is already on
+ * the stack. It follows `$this->m()`, `self::m()`, `static::m()`, `parent::m()`,
+ * `$service->m()` (declared concrete type) and `ProjectClass::m()`. Calls the
+ * caller considers "leaves" (catalog sinks and guards) are not expanded.
  */
 final class CallCollector
 {
@@ -108,7 +107,7 @@ final class CallCollector
         };
     }
 
-    /** O método do projeto que esta chamada executa, já com o contexto dele. */
+    /** The project method this call runs, already with its own context. */
     private function followed(Node $node, Frame $frame, ?Call $call, ?Closure $isLeaf): ?Frame
     {
         if (count($frame->stack) > self::MAX_DEPTH || ($call !== null && $isLeaf !== null && $isLeaf($call))) {

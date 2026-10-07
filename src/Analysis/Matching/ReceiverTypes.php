@@ -13,12 +13,11 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
 
 /**
- * Descobre o tipo do receptor de uma chamada de método, sem inferência geral.
+ * Finds the type of a method call's receiver, without general type inference.
  *
- * Só conhece: `$this->propriedade` e `$parametro` com tipo declarado, e
- * encadeamentos declarados no catálogo ("chains") a partir de uma classe
- * estática ou de um receptor de tipo conhecido. Qualquer outra coisa é
- * desconhecida (null).
+ * It only knows `$this->property` and `$parameter` with a declared type, and
+ * chains declared in the catalog ("chains") starting from a static class or from
+ * a receiver of a known type. Anything else is unknown (null).
  */
 final class ReceiverTypes
 {

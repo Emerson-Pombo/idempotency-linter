@@ -1,18 +1,18 @@
 # idempotency-linter
 
-Pacote Composer para Laravel que analisa estaticamente classes `Job` de fila (`ShouldQueue`) e identifica jobs que executam efeitos colaterais sensíveis a duplicação — cobranças, envio de e-mail, inserções no banco — sem qualquer proteção contra reexecução.
+A Composer package for Laravel that statically analyzes queue job classes (`ShouldQueue`) and finds jobs that perform side effects sensitive to duplication — charges, emails, database inserts — with no protection against re-execution.
 
-> ⚠️ **Status: pré-lançamento (0.x).** O motor de análise, o comando Artisan e a saída JSON já funcionam, mas o formato dos catálogos de detecção ainda pode mudar entre versões 0.x. Veja o [CHANGELOG](CHANGELOG.md). Use como ferramenta de desenvolvimento e CI, não como dependência de produção.
+> ⚠️ **Status: pre-release (0.x).** The analysis engine, the Artisan command and the JSON output already work, but the format of the detection catalogs may still change between 0.x versions. See the [CHANGELOG](CHANGELOG.md). Use it as a development and CI tool, not as a production dependency.
 
-## O problema
+## The problem
 
-Sistemas de filas (Laravel Queues, BullMQ, Sidekiq, Celery) operam sob garantia **at-least-once**: falhas de rede, timeouts e reinicializações de deploy podem fazer o mesmo job rodar mais de uma vez. Cabe ao desenvolvedor tornar cada job idempotente manualmente — e esse processo é propenso a falhas humanas. Em bases de código com dezenas de jobs, é comum que alguns fiquem sem proteção, e o problema só aparece em produção como incidente visível (cobrança duplicada, e-mail repetido, registro duplicado).
+Queue systems (Laravel Queues, BullMQ, Sidekiq, Celery) run under an **at-least-once** guarantee: network failures, timeouts and deploy restarts can make the same job run more than once. Making each job idempotent is left to the developer, by hand — and that process is prone to human error. In codebases with dozens of jobs, it is common for some to be left unprotected, and the problem only shows up in production as a visible incident (a duplicate charge, a repeated email, a duplicate record).
 
-Hoje, as ferramentas existentes (bibliotecas de idempotência, middlewares de deduplicação) atuam apenas na camada de **prevenção manual**: o desenvolvedor decora explicitamente o código com uma chave de idempotência. Nenhuma ferramenta pública audita automaticamente código já existente para sinalizar jobs desprotegidos antes que virem incidente.
+Today, existing tools (idempotency libraries, deduplication middleware) only work at the **manual prevention** layer: the developer explicitly decorates the code with an idempotency key. No public tool automatically audits existing code to flag unprotected jobs before they become an incident.
 
-## A proposta
+## The idea
 
-Um linter estático (via [nikic/php-parser](https://github.com/nikic/PHP-Parser)) que percorre o método `handle()` de cada Job Laravel, identifica chamadas de efeitos colaterais perigosos ("sinks") e verifica se existe uma guarda de idempotência reconhecida ("guards") protegendo essa chamada. Jobs sem proteção são reportados com nível de risco e localização exata no código.
+A static linter (built on [nikic/php-parser](https://github.com/nikic/PHP-Parser)) that walks the `handle()` method of every Laravel job, finds calls with dangerous side effects ("sinks") and checks whether a recognized idempotency guard ("guards") protects each one. Unprotected jobs are reported with a risk level and the exact location in the code.
 
 ```bash
 composer require --dev emerson-pombo/idempotency-linter
@@ -21,86 +21,86 @@ php artisan idempotency:scan app/Jobs
 ```
 
 ```
-🔴 ALTO RISCO — app/Jobs/ProcessarPagamentoJob.php:16
-   Chamada a gateway de pagamento sem verificação de idempotência.
-   Job: App\Jobs\ProcessarPagamentoJob
+🔴 HIGH RISK — app/Jobs/ProcessPaymentJob.php:16
+   Call to a payment gateway without an idempotency check.
+   Job: App\Jobs\ProcessPaymentJob
 
-❌ 2 jobs analisados, 1 com risco, 1 protegido corretamente.
+❌ 2 jobs analyzed, 1 at risk, 1 protected.
 ```
 
-## Escopo do MVP
+## Scope
 
-- Pacote Composer instalável em qualquer projeto Laravel.
-- Comando Artisan `idempotency:scan`.
-- Análise estática de classes `ShouldQueue`, a partir do método `handle()` e seguindo o código do próprio projeto.
-- Catálogos de sinks e guardas customizáveis via config publicável.
-- Relatório de risco (alto/médio/baixo) com arquivo e linha exatos.
+- A Composer package that installs in any Laravel project.
+- The `idempotency:scan` Artisan command.
+- Static analysis of `ShouldQueue` classes, starting at `handle()` and following the project's own code.
+- Customizable sink and guard catalogs through a publishable config.
+- A risk report (high/medium/low) with the exact file and line.
 
-Fora do escopo por enquanto: análise dinâmica/runtime, idempotência distribuída entre microsserviços, correção automática, outros ecossistemas de fila (BullMQ, Sidekiq, Celery) e outras interfaces (VSCode, CI, SaaS) — tudo isso é evolução futura planejada.
+Out of scope for now: dynamic/runtime analysis, distributed idempotency across microservices, automatic fixes and other queue ecosystems (BullMQ, Sidekiq, Celery). They are possible future work.
 
-## Como a análise funciona
+## How the analysis works
 
-Para cada job `ShouldQueue`, o linter lê o corpo do `handle()` e:
+For each `ShouldQueue` job, the linter reads the body of `handle()` and:
 
-1. **Procura sinks:** a partir do `handle()`, e dos métodos do projeto que ele chama, procura chamadas do catálogo `sinks` (pagamento, e-mail, notificação, HTTP, inserção no banco). Cada chamada encontrada gera um achado, com a linha exata.
-2. **Procura guards:** chamadas do catálogo `guards` (`Cache::lock`/`Cache::add`, `firstOrCreate`/`updateOrCreate`/`upsert`, chave de idempotência em arrays como `['idempotency_key' => ...]`). Um guard só protege o que vem **depois dele na ordem de execução** (o corpo de um método seguido conta no ponto onde ele é chamado); guard posterior ao sink não conta. Uma chave de idempotência também protege a chamada que a recebe como argumento.
-3. **Considera proteção parcial:** se o job implementa `ShouldBeUnique`, o risco de cada achado cai um nível (alto → médio → baixo) e achados de risco baixo deixam de ser reportados. O `ShouldBeUnique` evita jobs simultâneos, mas não cobre retry nem reentrega.
+1. **Looks for sinks:** starting at `handle()`, and in the project methods it calls, it looks for calls from the `sinks` catalog (payment, email, notification, HTTP, database insert). Each call found produces a finding with the exact line.
+2. **Looks for guards:** calls from the `guards` catalog (`Cache::lock`/`Cache::add`, `firstOrCreate`/`updateOrCreate`/`upsert`, an idempotency key in arrays such as `['idempotency_key' => ...]`). A guard only protects what comes **after it in execution order** (the body of a followed method counts at the point where it is called); a guard placed after the sink does not count. An idempotency key also protects the call that receives it as an argument.
+3. **Accounts for partial protection:** if the job implements `ShouldBeUnique`, the risk of each finding drops one level (high → medium → low) and low-risk findings are no longer reported. `ShouldBeUnique` prevents concurrent jobs, but it does not cover retries or redelivery.
 
-### O que é seguido
+### What is followed
 
-O linter acompanha o fluxo para dentro do código do projeto, até 5 níveis, sem repetir um método que já está em execução:
+The linter follows the flow into the project's code, up to 5 levels deep, without repeating a method that is already running:
 
-- métodos da própria classe: `$this->metodo()`, `self::metodo()` e `static::metodo()`;
-- serviços injetados com **tipo concreto declarado**: `$this->servico->metodo()` (propriedade, inclusive promovida no construtor) e `$servico->metodo()` (parâmetro do `handle()`), além de chamadas estáticas a classes do projeto (`Helper::metodo()`);
-- métodos herdados: definidos na classe pai, `parent::metodo()` e o próprio `handle()` quando o job filho não o define;
-- métodos de traits do projeto, e propriedades tipadas vindas do pai ou de traits.
+- methods of the class itself: `$this->method()`, `self::method()` and `static::method()`;
+- injected services with a **declared concrete type**: `$this->service->method()` (a property, including one promoted in the constructor) and `$service->method()` (a parameter of `handle()`), plus static calls to project classes (`Helper::method()`);
+- inherited methods: defined on the parent class, `parent::method()`, and `handle()` itself when the child job does not define it;
+- methods of project traits, and typed properties coming from the parent or from traits.
 
-O achado aponta o arquivo e a linha reais do sink (por exemplo, dentro do serviço) e o job que o alcança. Se vários jobs usam o mesmo serviço, cada um gera o seu achado. Classes de `vendor/`, interfaces e chamadas que já são sinks ou guards do catálogo não são seguidas por dentro.
+A finding points to the real file and line of the sink (for example, inside the service) and to the job that reaches it. If several jobs use the same service, each one produces its own finding. Classes from `vendor/`, interfaces, and calls that are already catalog sinks or guards are not followed inside.
 
-Métodos são reconhecidos quando o tipo do objeto é conhecido: chamadas estáticas (`Mail::send()`), funções, e métodos em propriedades (inclusive promovidas no construtor) ou parâmetros do `handle()` com **tipo declarado** (`$this->stripe->create()` com `PaymentIntentService $stripe`). Subclasses, interfaces e traits do catálogo também casam (`Invoice::create()` com `Invoice extends Model`).
+Methods are recognized when the type of the object is known: static calls (`Mail::send()`), functions, and methods on properties (including ones promoted in the constructor) or `handle()` parameters with a **declared type** (`$this->stripe->create()` with `PaymentIntentService $stripe`). Subclasses, interfaces and traits from the catalog also match (`Invoice::create()` with `Invoice extends Model`).
 
-Encadeamentos são seguidos quando estão declarados no catálogo `chains`, que diz qual tipo cada método devolve. Por padrão cobrem `Mail::to($u)->cc($c)->send($m)`, `Http::withToken($t)->acceptJson()->post($url)` e `Notification::route('mail', $to)->notify($n)`. A linha reportada é a do início do encadeamento.
+Chained calls are followed when they are declared in the `chains` catalog, which says what type each method returns. By default it covers `Mail::to($u)->cc($c)->send($m)`, `Http::withToken($t)->acceptJson()->post($url)` and `Notification::route('mail', $to)->notify($n)`. The reported line is the one where the chain starts.
 
-### Limitações da v1
+### Limitations of v1
 
-- Dependências tipadas por **interface** não são seguidas (a implementação só é conhecida pelo container em tempo de execução), nem serviços obtidos por `app(Servico::class)`, `new` em variável local ou injeção por método fora do `handle()`.
-- Classes de `vendor/` (inclusive traits do framework, como `Queueable`) não são seguidas por dentro.
-- Sem inferência de tipos: variáveis locais, propriedades sem tipo e encadeamentos que não estão no catálogo `chains` (por exemplo `app(Foo::class)->send()`) são ignorados, sem erro.
-- Um guard conta apenas pela posição no código; um guard dentro de um `if` sem relação com o sink protege o sink mesmo assim.
-- Jobs que herdam a interface de uma classe base (`extends BaseJob`) ou usam uma interface que estende `ShouldQueue` são detectados, desde que a classe base seja resolvível: no mesmo arquivo, ou carregável pelo autoload. Pai que não carrega é ignorado.
+- Dependencies typed by **interface** are not followed (the implementation is only known to the container at runtime), nor are services obtained through `app(Service::class)`, `new` in a local variable, or method injection outside `handle()`.
+- Classes from `vendor/` (including framework traits such as `Queueable`) are not followed inside.
+- No type inference: local variables, untyped properties and chains that are not in the `chains` catalog (for example `app(Foo::class)->send()`) are ignored, without an error.
+- A guard only counts by its position in the code; a guard inside an unrelated `if` still protects the sink.
+- Jobs that inherit the interface from a base class (`extends BaseJob`) or use an interface that extends `ShouldQueue` are detected, as long as the base class can be resolved: in the same file, or loadable through the autoloader. A parent that fails to load is ignored.
 
-### Atenção: autoload
+### Heads-up: autoloading
 
-Para resolver subclasses e traits, o linter carrega as classes do seu projeto pelo autoload do Composer (`class_exists`, `is_a`, `class_uses`). Ele **não instancia** nem executa classes, mas o autoload de uma classe com código no nível do arquivo executa esse código. Classes que falham ao carregar são ignoradas. Rode o comando no ambiente do projeto, como faria com qualquer comando Artisan.
+To resolve subclasses and traits, the linter loads your project's classes through Composer's autoloader (`class_exists`, `is_a`, `class_uses`). It **does not instantiate** or run classes, but autoloading a class with file-level code runs that code. Classes that fail to load are ignored. Run the command in the project's environment, as you would any Artisan command.
 
-## Instalação
+## Installation
 
-Requer PHP 8.1 ou superior e Laravel 10, 11, 12 ou 13.
+Requires PHP 8.1 or higher and Laravel 10, 11, 12 or 13.
 
 ```bash
 composer require --dev emerson-pombo/idempotency-linter
 ```
 
-O ServiceProvider é registrado automaticamente (auto-discovery do Laravel).
+The ServiceProvider is registered automatically (Laravel package auto-discovery).
 
-## Uso
+## Usage
 
 ```bash
-# analisa os caminhos definidos em config (padrão: app/Jobs)
+# analyze the paths defined in the config (default: app/Jobs)
 php artisan idempotency:scan
 
-# um ou mais arquivos/diretórios
+# one or more files/directories
 php artisan idempotency:scan app/Jobs app/Domain/Billing/Jobs
 
-# controla o código de saída (útil em CI): high | medium | low (padrão) | none
+# control the exit code (useful in CI): high | medium | low (default) | none
 php artisan idempotency:scan --fail-on=high
 ```
 
-O comando sai com código `1` se houver algum achado no nível de `--fail-on` ou acima.
+The command exits with code `1` if there is any finding at the `--fail-on` level or above.
 
-### Saída em JSON
+### JSON output
 
-Com `--format=json` (padrão: `text`) o comando imprime apenas um documento JSON no stdout, sem ícones nem avisos, e mantém o mesmo código de saída:
+With `--format=json` (default: `text`) the command prints only a JSON document to stdout, with no icons or warnings, and keeps the same exit code:
 
 ```bash
 php artisan idempotency:scan app/Jobs --format=json --fail-on=none > idempotency.json
@@ -118,62 +118,63 @@ php artisan idempotency:scan app/Jobs --format=json --fail-on=none > idempotency
     },
     "findings": [
         {
-            "file": "app/Jobs/ProcessarPagamentoJob.php",
+            "file": "app/Jobs/ProcessPaymentJob.php",
             "line": 16,
-            "job": "App\\Jobs\\ProcessarPagamentoJob",
+            "job": "App\\Jobs\\ProcessPaymentJob",
             "sink": "payment",
             "risk": "high",
-            "message": "Chamada a gateway de pagamento sem verificação de idempotência."
+            "message": "Call to a payment gateway without an idempotency check."
         }
     ],
     "errors": []
 }
 ```
 
-- `findings` vem ordenado do maior para o menor risco. `risk` é `high`, `medium` ou `low`.
-- `errors` lista caminhos inexistentes e arquivos com erro de sintaxe, que não interrompem a varredura.
-- `version` muda quando o formato muda de forma incompatível.
+- `findings` is sorted from highest to lowest risk. `risk` is `high`, `medium` or `low`.
+- `errors` lists paths that do not exist and files with syntax errors, which do not interrupt the scan.
+- `version` changes when the format changes in an incompatible way.
 
-Exemplo no GitHub Actions, falhando só em risco alto e guardando o relatório:
+A GitHub Actions example that fails only on high risk and keeps the report:
 
 ```yaml
 - run: php artisan idempotency:scan --format=json --fail-on=high | tee idempotency.json
 ```
 
-### Configuração
+### Configuration
 
 ```bash
 php artisan vendor:publish --tag=idempotency-linter-config
 ```
 
-Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de **sinks** (efeitos colaterais: pagamento, e-mail, notificação, HTTP, inserção no banco), **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, chave de idempotência, `ShouldBeUnique`) e **chains** (encadeamentos conhecidos). O formato desses catálogos ainda vai mudar. Em regras `function`, os nomes das funções vão na chave `functions` (ou `methods`).
+This creates `config/idempotency-linter.php` with the default paths and the catalogs of **sinks** (side effects: payment, email, notification, HTTP, database insert), **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, idempotency key, `ShouldBeUnique`) and **chains** (known call chains). The format of these catalogs may still change. In `function` rules, the function names go in the `functions` key (or `methods`).
 
 ## Roadmap
 
-- [x] Estrutura base: ServiceProvider, config publicável, comando `idempotency:scan`, localização de jobs `ShouldQueue`
-- [x] Motor de análise: detectar sinks dentro de `handle()`
-- [x] Detectar guards e decidir se protegem cada sink
-- [x] Resolver chamadas encadeadas declaradas no catálogo (`Mail::to()->send()`, `Http::withToken()->post()`)
-- [x] Seguir métodos da própria classe a partir do `handle()`
-- [x] Seguir serviços injetados, métodos herdados e traits do projeto a partir do `handle()`
-- [ ] Resolver interfaces para a implementação concreta
-- [x] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
-- [x] Saída JSON para CI (`--format=json`)
+- [x] Base structure: ServiceProvider, publishable config, `idempotency:scan` command, `ShouldQueue` job discovery
+- [x] Analysis engine: detect sinks inside `handle()`
+- [x] Detect guards and decide whether they protect each sink
+- [x] Resolve chained calls declared in the catalog (`Mail::to()->send()`, `Http::withToken()->post()`)
+- [x] Follow the class's own methods from `handle()`
+- [x] Follow injected services, inherited methods and project traits from `handle()`
+- [x] Recognize jobs that inherit `ShouldQueue` from a base class
+- [x] JSON output for CI (`--format=json`)
+- [ ] Resolve interfaces to their concrete implementation
+- [ ] SARIF output
 
-## Desenvolvimento
+## Development
 
 ```bash
 composer install
-composer check     # estilo (Pint) + análise estática (PHPStan nível 6) + testes
-composer format    # aplica o estilo automaticamente
+composer check     # code style (Pint) + static analysis (PHPStan level 6) + tests
+composer format    # applies the code style automatically
 ```
 
-O CI roda os testes em PHP 8.1 a 8.3 com Laravel 10, 11, 12 e 13 (combinações compatíveis), além de Pint e PHPStan.
+CI runs the tests on PHP 8.1 to 8.3 with Laravel 10, 11, 12 and 13 (compatible combinations), plus Pint and PHPStan.
 
-## Contribuindo
+## Contributing
 
-Issues e discussões são bem-vindas. Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and discussions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Licença
+## License
 
 [MIT](LICENSE)

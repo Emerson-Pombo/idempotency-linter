@@ -6,5 +6,5 @@ namespace IdempotencyLinter\Tests\Fixtures\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** Subclasse de Model, usada para testar a hierarquia de classes. */
+/** Subclass of Model, used to test class hierarchy resolution. */
 class Invoice extends Model {}

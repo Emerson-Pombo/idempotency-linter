@@ -5,21 +5,21 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Report;
 
 /**
- * Relatório em JSON, pensado para CI e para outras ferramentas.
+ * JSON report, meant for CI and other tools.
  *
- * O formato é versionado em "version": mudanças incompatíveis incrementam o número.
+ * The format is versioned in "version": incompatible changes bump the number.
  */
 final class JsonReporter
 {
     public const VERSION = 1;
 
     /**
-     * @param  callable(string): string  $relativePath  converte um caminho absoluto no exibido
+     * @param  callable(string): string  $relativePath  turns an absolute path into the displayed one
      */
     public function __construct(private $relativePath) {}
 
     /**
-     * @param  list<array{file: string, error: string}>  $pathErrors  erros anteriores à varredura (ex.: caminho inexistente)
+     * @param  list<array{file: string, error: string}>  $pathErrors  errors found before the scan (e.g. a path that does not exist)
      */
     public function render(ScanResult $result, array $pathErrors = []): string
     {

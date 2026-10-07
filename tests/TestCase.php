@@ -33,7 +33,7 @@ abstract class TestCase extends Orchestra
         parent::tearDown();
     }
 
-    /** Cria um arquivo PHP temporário e devolve o caminho absoluto. */
+    /** Creates a temporary PHP file and returns its absolute path. */
     protected function fixture(string $name, string $code): string
     {
         $this->fixtureDir ??= sys_get_temp_dir().'/idempotency-linter-'.bin2hex(random_bytes(4));
@@ -54,7 +54,7 @@ abstract class TestCase extends Orchestra
     }
 
     /**
-     * Roda o analisador real (com o catálogo do pacote) sobre o código de um job.
+     * Runs the real analyzer (with the package catalog) on a job's code.
      *
      * @return list<Finding>
      */

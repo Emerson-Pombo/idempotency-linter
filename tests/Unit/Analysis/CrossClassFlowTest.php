@@ -19,7 +19,7 @@ final class CrossClassFlowTest extends TestCase
 {
     private const NS = '\\IdempotencyLinter\\Tests\\Fixtures\\Services\\';
 
-    /** Monta um job; $header vem antes de "class" e $head completa a declaração. */
+    /** Builds a job; $head completes the class declaration. */
     private function job(string $members, string $head = 'implements \\Illuminate\\Contracts\\Queue\\ShouldQueue', string $uses = ''): string
     {
         return <<<PHP
@@ -126,7 +126,7 @@ final class CrossClassFlowTest extends TestCase
 
     public function test_vendor_and_unknown_classes_are_not_followed(): void
     {
-        $code = $this->job('public function __construct(private \\Illuminate\\Mail\\Mailer $mailer, private \\App\\Nao\\Existe $x) {}
+        $code = $this->job('public function __construct(private \\Illuminate\\Mail\\Mailer $mailer, private \\App\\Does\\NotExist $x) {}
             public function handle(): void { $this->mailer->send("v"); $this->x->run(); }');
 
         $this->assertSame([], $this->analyze($code));
@@ -144,7 +144,7 @@ final class CrossClassFlowTest extends TestCase
         $config = [
             'sinks' => ['gateway' => [
                 'risk' => 'high',
-                'message' => 'Cobrança.',
+                'message' => 'Charge.',
                 'match' => [['type' => 'method_call', 'class' => Gateway::class, 'methods' => ['charge']]],
             ]],
             'guards' => [],

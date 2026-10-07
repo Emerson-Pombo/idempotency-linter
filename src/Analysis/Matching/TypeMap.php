@@ -12,10 +12,10 @@ use PhpParser\Node\NullableType;
 use PhpParser\Node\Stmt\ClassMethod;
 
 /**
- * Tipos declarados conhecidos num ponto do código: propriedades da classe
- * (incluindo promovidas no construtor e herdadas de pai ou trait) e parâmetros
- * do método em execução. Sem inferência: o que não tem tipo declarado simples é
- * desconhecido.
+ * Declared types known at a point in the code: the class's properties
+ * (including those promoted in the constructor and inherited from a parent or
+ * trait) and the parameters of the running method. No inference: anything
+ * without a simple declared type is unknown.
  */
 final class TypeMap
 {
@@ -43,7 +43,7 @@ final class TypeMap
         return $this->variables[$name] ?? null;
     }
 
-    /** Nome completo da classe de um tipo simples (ou anulável); null para os demais. */
+    /** Full class name of a simple (or nullable) type; null for the others. */
     public static function typeName(Identifier|Name|ComplexType|null $type): ?string
     {
         if ($type instanceof NullableType) {

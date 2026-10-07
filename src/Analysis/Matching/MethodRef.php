@@ -7,8 +7,8 @@ namespace IdempotencyLinter\Analysis\Matching;
 use PhpParser\Node\Stmt\ClassMethod;
 
 /**
- * Um método encontrado no código do projeto, com o arquivo onde ele está e a
- * classe (ou trait) que o declara.
+ * A method found in the project's code, with the file it lives in and the class
+ * (or trait) that declares it.
  */
 final class MethodRef
 {
@@ -18,7 +18,7 @@ final class MethodRef
         public readonly ClassContext $declaring,
     ) {}
 
-    /** Identifica o método, para cortar recursão. */
+    /** Identifies the method, to cut recursion. */
     public function key(): string
     {
         return strtolower($this->declaring->name().'::'.$this->method->name->toString());

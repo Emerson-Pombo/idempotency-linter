@@ -7,7 +7,7 @@ namespace IdempotencyLinter\Tests\Fixtures\Services;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 
-/** Serviço do projeto com um sink e uma variação protegida. */
+/** Project service with a sink and a protected variation. */
 class Notifier
 {
     public function send(): void

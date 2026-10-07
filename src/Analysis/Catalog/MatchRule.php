@@ -7,15 +7,15 @@ namespace IdempotencyLinter\Analysis\Catalog;
 use InvalidArgumentException;
 
 /**
- * Uma regra de correspondência do catálogo (um item de "match" no config).
+ * A catalog matching rule (one "match" item in the config).
  */
 final class MatchRule
 {
     public const TYPES = ['static_call', 'method_call', 'function', 'interface', 'array_key'];
 
     /**
-     * @param  list<string>  $methods  métodos (static_call/method_call) ou funções (function)
-     * @param  list<string>  $keys  chaves de array (array_key)
+     * @param  list<string>  $methods  methods (static_call/method_call) or functions (function)
+     * @param  list<string>  $keys  array keys (array_key)
      */
     public function __construct(
         public readonly string $type,
@@ -24,7 +24,7 @@ final class MatchRule
         public readonly array $keys = [],
     ) {
         if (! in_array($type, self::TYPES, true)) {
-            throw new InvalidArgumentException("Tipo de match desconhecido no catálogo: {$type}");
+            throw new InvalidArgumentException("Unknown match type in catalog: {$type}");
         }
     }
 

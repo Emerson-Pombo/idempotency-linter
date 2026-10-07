@@ -7,10 +7,10 @@ namespace IdempotencyLinter\Analysis\Catalog;
 use InvalidArgumentException;
 
 /**
- * Declara que chamar um dos "methods" em "class" (estaticamente, como numa
- * facade, ou em uma instância desse tipo) devolve um objeto do tipo "returns".
- * É assim que o linter segue encadeamentos como Mail::to($u)->cc($c)->send($m)
- * sem inferir tipos.
+ * Declares that calling one of the "methods" on "class" (statically, as on a
+ * facade, or on an instance of that type) returns an object of type "returns".
+ * This is how the linter follows chains such as Mail::to($u)->cc($c)->send($m)
+ * without inferring types.
  */
 final class Chain
 {
@@ -26,7 +26,7 @@ final class Chain
     {
         foreach (['class', 'returns'] as $key) {
             if (empty($data[$key])) {
-                throw new InvalidArgumentException("Encadeamento do catálogo sem a chave '{$key}'.");
+                throw new InvalidArgumentException("Catalog chain is missing the '{$key}' key.");
             }
         }
 
