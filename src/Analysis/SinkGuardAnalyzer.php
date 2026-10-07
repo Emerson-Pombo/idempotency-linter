@@ -11,10 +11,11 @@ use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 use IdempotencyLinter\Analysis\Matching\Call;
 use IdempotencyLinter\Analysis\Matching\CallCollector;
 use IdempotencyLinter\Analysis\Matching\CallKind;
+use IdempotencyLinter\Analysis\Matching\ClassLocator;
 use IdempotencyLinter\Analysis\Matching\ClassMatcher;
+use IdempotencyLinter\Analysis\Matching\MethodRef;
 use IdempotencyLinter\Analysis\Matching\ReceiverTypes;
 use IdempotencyLinter\Analysis\Matching\RuleMatcher;
-use IdempotencyLinter\Analysis\Matching\TypeMap;
 use IdempotencyLinter\Report\Finding;
 
 /**
@@ -34,19 +35,25 @@ final class SinkGuardAnalyzer implements JobAnalyzer
         private readonly ClassMatcher $classes = new ClassMatcher,
         ?RuleMatcher $matcher = null,
         ?CallCollector $collector = null,
+        private readonly ClassLocator $locator = new ClassLocator,
     ) {
         $this->matcher = $matcher ?? new RuleMatcher($classes);
-        $this->collector = $collector ?? new CallCollector(new ReceiverTypes($catalog->chains, $classes));
+        $this->collector = $collector ?? new CallCollector(new ReceiverTypes($catalog->chains, $classes), $locator);
     }
 
     /** @return list<Finding> */
     public function analyze(JobClass $job): array
     {
-        if ($job->entryMethod === null || $this->guardOfJob($job, partial: false) !== null) {
+        $context = $this->locator->contextFor($job);
+        $entry = $job->entryMethod !== null
+            ? new MethodRef($job->entryMethod, $job->file, $context)
+            : $context->findMethod($job->entryName);
+
+        if ($entry === null || $this->guardOfJob($job, partial: false) !== null) {
             return [];
         }
 
-        $calls = $this->collector->collect($job->entryMethod, TypeMap::forJob($job), $job->node);
+        $calls = $this->collector->collect($entry, $context, $this->isLeaf(...));
         $guardCalls = $this->guardCalls($calls, partial: false);
         $partialCalls = $this->guardCalls($calls, partial: true);
         $jobIsPartiallyProtected = $this->guardOfJob($job, partial: true) !== null;
@@ -62,7 +69,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
             }
 
             // Um método seguido a partir de vários pontos gera um achado só.
-            $key = $call->line.'|'.$sink->name;
+            $key = $call->file.'|'.$call->line.'|'.$sink->name;
 
             if (isset($reported[$key])) {
                 continue;
@@ -83,7 +90,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
             $reported[$key] = true;
 
             $findings[] = new Finding(
-                file: $job->file,
+                file: $call->file,
                 line: $call->line,
                 jobClass: $job->className,
                 sink: $sink->name,
@@ -93,6 +100,22 @@ final class SinkGuardAnalyzer implements JobAnalyzer
         }
 
         return $findings;
+    }
+
+    /** Sinks e guards do catálogo são tratados como folhas: não se segue o código por dentro deles. */
+    private function isLeaf(Call $call): bool
+    {
+        if ($this->sinkFor($call) !== null) {
+            return true;
+        }
+
+        foreach ($this->catalog->guards as $guard) {
+            if ($this->matchesAny($guard->rules, $call)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function sinkFor(Call $call): ?Sink

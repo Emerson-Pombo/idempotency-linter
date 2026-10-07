@@ -116,6 +116,7 @@ final class ScanCommand extends Command
             $finding->line,
         ));
         $this->line('   '.$finding->message);
+        $this->line('   Job: '.$finding->jobClass);
     }
 
     private function relative(string $path): string

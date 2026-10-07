@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace IdempotencyLinter\Analysis\Matching;
 
+use Closure;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\FuncCall;
@@ -11,50 +12,59 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Stmt\Class_;
-use PhpParser\Node\Stmt\ClassMethod;
 
 /**
  * Coleta, em ordem de execução, as chamadas do método de entrada.
  *
- * Chamadas a métodos da própria classe ($this->metodo(), self::metodo(),
- * static::metodo()) são seguidas: o corpo do método é inserido no ponto da
- * chamada, até MAX_DEPTH níveis e sem repetir um método que já está na pilha.
+ * Chamadas a métodos do projeto são seguidas: o corpo do método é inserido no
+ * ponto da chamada, até MAX_DEPTH níveis e sem repetir um método que já está na
+ * pilha. Seguem-se `$this->m()`, `self::m()`, `static::m()`, `parent::m()`,
+ * `$servico->m()` (tipo concreto declarado) e `ClasseDoProjeto::m()`. Chamadas
+ * que o chamador considera "folha" (sinks e guards do catálogo) não são
+ * expandidas.
  */
 final class CallCollector
 {
     public const MAX_DEPTH = 5;
 
-    public function __construct(private readonly ReceiverTypes $receivers = new ReceiverTypes) {}
+    public function __construct(
+        private readonly ReceiverTypes $receivers = new ReceiverTypes,
+        private readonly ClassLocator $locator = new ClassLocator,
+    ) {}
 
-    /** @return list<Call> */
-    public function collect(ClassMethod $method, TypeMap $types, ?Class_ $class = null): array
+    /**
+     * @param  ?Closure(Call): bool  $isLeaf
+     * @return list<Call>
+     */
+    public function collect(MethodRef $entry, ClassContext $context, ?Closure $isLeaf = null): array
     {
         $slots = [];
         $order = 0;
+        $frame = new Frame($entry, $context, TypeMap::forContext($context, $entry->method), [$entry->key()]);
 
-        $this->walkMethod($method, $types, $class, [strtolower($method->name->toString())], $slots, $order);
+        $this->walkMethod($frame, $slots, $order, $isLeaf);
 
         return array_values(array_filter($slots));
     }
 
     /**
-     * @param  list<string>  $stack  métodos em execução, em minúsculas
      * @param  array<int, ?Call>  $slots
+     * @param  ?Closure(Call): bool  $isLeaf
      */
-    private function walkMethod(ClassMethod $method, TypeMap $types, ?Class_ $class, array $stack, array &$slots, int &$order): void
+    private function walkMethod(Frame $frame, array &$slots, int &$order, ?Closure $isLeaf): void
     {
-        foreach ($method->stmts ?? [] as $statement) {
-            $this->walk($statement, $types, $class, $stack, $slots, $order);
+        foreach ($frame->method->method->stmts ?? [] as $statement) {
+            $this->walk($statement, $frame, $slots, $order, $isLeaf);
         }
     }
 
     /**
-     * @param  list<string>  $stack
      * @param  array<int, ?Call>  $slots
+     * @param  ?Closure(Call): bool  $isLeaf
      */
-    private function walk(Node $node, TypeMap $types, ?Class_ $class, array $stack, array &$slots, int &$order): void
+    private function walk(Node $node, Frame $frame, array &$slots, int &$order, ?Closure $isLeaf): void
     {
-        $call = $this->callFor($node, $types);
+        $call = $this->callFor($node, $frame);
         $slot = 0;
         $first = $order;
 
@@ -69,15 +79,15 @@ final class CallCollector
 
             foreach (is_array($child) ? $child : [$child] as $item) {
                 if ($item instanceof Node) {
-                    $this->walk($item, $types, $class, $stack, $slots, $order);
+                    $this->walk($item, $frame, $slots, $order, $isLeaf);
                 }
             }
         }
 
-        $followed = $this->followedMethod($node, $class, $stack);
+        $next = $this->followed($node, $frame, $call, $isLeaf);
 
-        if ($followed !== null) {
-            $this->walkMethod($followed, $types->forMethod($followed), $class, [...$stack, strtolower($followed->name->toString())], $slots, $order);
+        if ($next !== null) {
+            $this->walkMethod($next, $slots, $order, $isLeaf);
         }
 
         if ($call !== null) {
@@ -85,76 +95,129 @@ final class CallCollector
         }
     }
 
-    private function callFor(Node $node, TypeMap $types): ?Call
+    private function callFor(Node $node, Frame $frame): ?Call
     {
+        $file = $frame->method->file;
+
         return match (true) {
-            $node instanceof StaticCall => $this->staticCall($node),
-            $node instanceof FuncCall => $this->functionCall($node),
-            $node instanceof MethodCall => $this->methodCall($node, $types),
-            $node instanceof Array_ => $this->arrayLiteral($node),
+            $node instanceof StaticCall => $this->staticCall($node, $file),
+            $node instanceof FuncCall => $this->functionCall($node, $file),
+            $node instanceof MethodCall => $this->methodCall($node, $frame),
+            $node instanceof Array_ => $this->arrayLiteral($node, $file),
             default => null,
         };
+    }
+
+    /** O método do projeto que esta chamada executa, já com o contexto dele. */
+    private function followed(Node $node, Frame $frame, ?Call $call, ?Closure $isLeaf): ?Frame
+    {
+        if (count($frame->stack) > self::MAX_DEPTH || ($call !== null && $isLeaf !== null && $isLeaf($call))) {
+            return null;
+        }
+
+        $target = match (true) {
+            $node instanceof MethodCall && $node->name instanceof Node\Identifier => $this->methodCallTarget($node, $frame),
+            $node instanceof StaticCall && $node->name instanceof Node\Identifier && $node->class instanceof Node\Name => $this->staticCallTarget($node, $frame),
+            default => null,
+        };
+
+        if ($target === null || in_array($target[0]->key(), $frame->stack, true)) {
+            return null;
+        }
+
+        [$method, $context] = $target;
+
+        return new Frame($method, $context, TypeMap::forContext($context, $method->method), [...$frame->stack, $method->key()]);
+    }
+
+    /** @return ?array{0: MethodRef, 1: ClassContext} */
+    private function methodCallTarget(MethodCall $node, Frame $frame): ?array
+    {
+        if ($node->var instanceof Variable && $node->var->name === 'this') {
+            return $this->lookup($frame->context, $node->name->toString());
+        }
+
+        $type = $this->receivers->typeOf($node->var, $frame->types);
+        $context = $type !== null ? $this->locator->locate($type, $frame->method->file) : null;
+
+        return $context !== null && $context->node instanceof Class_ ? $this->lookup($context, $node->name->toString()) : null;
+    }
+
+    /** @return ?array{0: MethodRef, 1: ClassContext} */
+    private function staticCallTarget(StaticCall $node, Frame $frame): ?array
+    {
+        $class = $node->class->toString();
+        $name = $node->name->toString();
+
+        return match (strtolower($class)) {
+            'self', 'static' => $this->lookup($frame->context, $name),
+            'parent' => ($parent = $frame->method->declaring->parent()) === null
+                ? null
+                : $this->lookupFrom($parent, $frame->context, $name),
+            default => $this->lookupClass($class, $name, $frame),
+        };
+    }
+
+    /** @return ?array{0: MethodRef, 1: ClassContext} */
+    private function lookupClass(string $class, string $name, Frame $frame): ?array
+    {
+        $context = $this->locator->locate($class, $frame->method->file);
+
+        return $context !== null && $context->node instanceof Class_ ? $this->lookup($context, $name) : null;
+    }
+
+    /** @return ?array{0: MethodRef, 1: ClassContext} */
+    private function lookup(ClassContext $context, string $name): ?array
+    {
+        return $this->lookupFrom($context, $context, $name);
     }
 
     /**
-     * Método da própria classe chamado por $this->m(), self::m() ou static::m().
+     * Procura a partir de $from, mas executa no contexto $context (o `$this`).
      *
-     * @param  list<string>  $stack
+     * @return ?array{0: MethodRef, 1: ClassContext}
      */
-    private function followedMethod(Node $node, ?Class_ $class, array $stack): ?ClassMethod
+    private function lookupFrom(ClassContext $from, ClassContext $context, string $name): ?array
     {
-        if ($class === null || count($stack) > self::MAX_DEPTH) {
-            return null;
-        }
+        $method = $from->findMethod($name);
 
-        $name = match (true) {
-            $node instanceof MethodCall && $node->var instanceof Variable && $node->var->name === 'this' => $node->name,
-            $node instanceof StaticCall && $node->class instanceof Node\Name
-                && in_array(strtolower($node->class->toString()), ['self', 'static'], true) => $node->name,
-            default => null,
-        };
-
-        if (! $name instanceof Node\Identifier || in_array(strtolower($name->toString()), $stack, true)) {
-            return null;
-        }
-
-        return $class->getMethod($name->toString());
+        return $method === null ? null : [$method, $context];
     }
 
-    private function staticCall(StaticCall $node): ?Call
+    private function staticCall(StaticCall $node, string $file): ?Call
     {
         if (! $node->class instanceof Node\Name || ! $node->name instanceof Node\Identifier) {
             return null;
         }
 
-        return new Call(CallKind::StaticCall, $node->class->toString(), $node->name->toString(), [], $node->getStartLine());
+        return new Call(CallKind::StaticCall, $node->class->toString(), $node->name->toString(), [], $file, $node->getStartLine());
     }
 
-    private function functionCall(FuncCall $node): ?Call
+    private function functionCall(FuncCall $node, string $file): ?Call
     {
         if (! $node->name instanceof Node\Name) {
             return null;
         }
 
-        return new Call(CallKind::Function, null, ltrim($node->name->toString(), '\\'), [], $node->getStartLine());
+        return new Call(CallKind::Function, null, ltrim($node->name->toString(), '\\'), [], $file, $node->getStartLine());
     }
 
-    private function methodCall(MethodCall $node, TypeMap $types): ?Call
+    private function methodCall(MethodCall $node, Frame $frame): ?Call
     {
         if (! $node->name instanceof Node\Identifier) {
             return null;
         }
 
-        $type = $this->receivers->typeOf($node->var, $types);
+        $type = $this->receivers->typeOf($node->var, $frame->types);
 
         if ($type === null) {
             return null;
         }
 
-        return new Call(CallKind::Method, $type, $node->name->toString(), [], $node->getStartLine());
+        return new Call(CallKind::Method, $type, $node->name->toString(), [], $frame->method->file, $node->getStartLine());
     }
 
-    private function arrayLiteral(Array_ $node): ?Call
+    private function arrayLiteral(Array_ $node, string $file): ?Call
     {
         $keys = [];
 
@@ -168,6 +231,6 @@ final class CallCollector
             return null;
         }
 
-        return new Call(CallKind::ArrayLiteral, null, null, $keys, $node->getStartLine());
+        return new Call(CallKind::ArrayLiteral, null, null, $keys, $file, $node->getStartLine());
     }
 }

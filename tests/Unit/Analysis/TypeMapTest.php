@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Tests\Unit\Analysis;
 
 use IdempotencyLinter\Analysis\JobFinder;
+use IdempotencyLinter\Analysis\Matching\ClassLocator;
 use IdempotencyLinter\Analysis\Matching\TypeMap;
 use IdempotencyLinter\Tests\TestCase;
 
@@ -32,7 +33,7 @@ final class TypeMapTest extends TestCase
         PHP);
 
         $job = (new JobFinder)->findInFile($file)[0];
-        $types = TypeMap::forJob($job);
+        $types = TypeMap::forContext((new ClassLocator)->contextFor($job), $job->entryMethod);
 
         $this->assertSame('App\Services\Gateway', $types->property('declared'));
         $this->assertSame('App\Services\Mailer', $types->property('promoted'));

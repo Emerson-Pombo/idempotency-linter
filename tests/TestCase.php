@@ -58,10 +58,10 @@ abstract class TestCase extends Orchestra
      *
      * @return list<Finding>
      */
-    protected function analyze(string $code): array
+    protected function analyze(string $code, ?array $config = null): array
     {
         $file = $this->fixture('Job'.bin2hex(random_bytes(3)).'.php', $code);
-        $analyzer = new SinkGuardAnalyzer(Catalog::fromConfig(require __DIR__.'/../config/idempotency-linter.php'));
+        $analyzer = new SinkGuardAnalyzer(Catalog::fromConfig($config ?? require __DIR__.'/../config/idempotency-linter.php'));
 
         $findings = [];
 
