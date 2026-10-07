@@ -7,6 +7,9 @@ namespace IdempotencyLinter\Analysis\Matching;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\FuncCall;
+use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\PropertyFetch;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeFinder;
@@ -17,11 +20,11 @@ use PhpParser\NodeFinder;
 final class CallCollector
 {
     /** @return list<Call> */
-    public function collect(ClassMethod $method): array
+    public function collect(ClassMethod $method, TypeMap $types): array
     {
         $nodes = (new NodeFinder())->find(
             $method->stmts ?? [],
-            fn (Node $node) => $node instanceof StaticCall || $node instanceof FuncCall || $node instanceof Array_,
+            fn (Node $node) => $node instanceof StaticCall || $node instanceof FuncCall || $node instanceof MethodCall || $node instanceof Array_,
         );
 
         $calls = [];
@@ -30,6 +33,7 @@ final class CallCollector
             $call = match (true) {
                 $node instanceof StaticCall => $this->staticCall($node),
                 $node instanceof FuncCall => $this->functionCall($node),
+                $node instanceof MethodCall => $this->methodCall($node, $types),
                 $node instanceof Array_ => $this->arrayLiteral($node),
             };
 
@@ -73,6 +77,46 @@ final class CallCollector
             $node->getEndFilePos(),
             $node->getStartLine(),
         );
+    }
+
+    private function methodCall(MethodCall $node, TypeMap $types): ?Call
+    {
+        if (! $node->name instanceof Node\Identifier) {
+            return null;
+        }
+
+        $type = $this->receiverType($node->var, $types);
+
+        if ($type === null) {
+            return null;
+        }
+
+        return new Call(
+            CallKind::Method,
+            $type,
+            $node->name->toString(),
+            [],
+            $node->getStartFilePos(),
+            $node->getEndFilePos(),
+            $node->getStartLine(),
+        );
+    }
+
+    /** Só receptores simples: $this->propriedade ou $parametro. */
+    private function receiverType(Node\Expr $receiver, TypeMap $types): ?string
+    {
+        if ($receiver instanceof PropertyFetch
+            && $receiver->var instanceof Variable
+            && $receiver->var->name === 'this'
+            && $receiver->name instanceof Node\Identifier) {
+            return $types->property($receiver->name->toString());
+        }
+
+        if ($receiver instanceof Variable && is_string($receiver->name)) {
+            return $types->variable($receiver->name);
+        }
+
+        return null;
     }
 
     private function arrayLiteral(Array_ $node): ?Call

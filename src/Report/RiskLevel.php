@@ -36,4 +36,14 @@ enum RiskLevel: string
             self::Low => 1,
         };
     }
+
+    /** Um nível abaixo, ou null quando já é o menor. */
+    public function lower(): ?self
+    {
+        return match ($this) {
+            self::High => self::Medium,
+            self::Medium => self::Low,
+            self::Low => null,
+        };
+    }
 }
