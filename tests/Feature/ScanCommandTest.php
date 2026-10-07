@@ -169,4 +169,24 @@ final class ScanCommandTest extends TestCase
         $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'low'])
             ->assertExitCode(0);
     }
+
+    public function test_scan_finds_job_that_inherits_the_job_interface(): void
+    {
+        $file = $this->fixture('Child.php', <<<'PHP'
+        <?php
+        use Illuminate\Support\Facades\Mail;
+
+        class Child extends \IdempotencyLinter\Tests\Fixtures\Jobs\BaseQueuedJob
+        {
+            public function handle(): void
+            {
+                Mail::send($mailable);
+            }
+        }
+        PHP);
+
+        $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'medium'])
+            ->expectsOutputToContain('MÉDIO RISCO')
+            ->assertExitCode(1);
+    }
 }

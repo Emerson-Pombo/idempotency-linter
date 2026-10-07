@@ -104,11 +104,76 @@ final class JobFinderTest extends TestCase
         $this->assertNotNull($jobs[0]->entryMethod);
     }
 
-    public function test_does_not_follow_inheritance(): void
+    public function test_ignores_class_whose_parent_cannot_be_resolved(): void
     {
         $file = $this->fixture('Child.php', <<<'PHP'
         <?php
-        class Child extends BaseJob {}
+        class Child extends BaseJobDesconhecida {}
+        PHP);
+
+        $this->assertSame([], (new JobFinder)->findInFile($file));
+    }
+
+    public function test_finds_job_that_extends_parent_from_same_file(): void
+    {
+        $file = $this->fixture('Chain.php', <<<'PHP'
+        <?php
+        namespace App\Jobs;
+
+        abstract class Base implements \Illuminate\Contracts\Queue\ShouldQueue {}
+        abstract class Middle extends Base {}
+        class Leaf extends Middle { public function handle(): void {} }
+        class Other {}
+        PHP);
+
+        $names = array_map(fn ($job) => $job->className, (new JobFinder)->findInFile($file));
+
+        $this->assertSame(['App\Jobs\Base', 'App\Jobs\Middle', 'App\Jobs\Leaf'], $names);
+    }
+
+    public function test_finds_job_that_extends_parent_from_another_file(): void
+    {
+        $file = $this->fixture('Child.php', <<<'PHP'
+        <?php
+        use IdempotencyLinter\Tests\Fixtures\Jobs\BaseQueuedJob;
+
+        class Child extends BaseQueuedJob { public function handle(): void {} }
+        PHP);
+
+        $jobs = (new JobFinder)->findInFile($file);
+
+        $this->assertCount(1, $jobs);
+        $this->assertSame('Child', $jobs[0]->className);
+        $this->assertNotNull($jobs[0]->entryMethod);
+        $this->assertSame([], $jobs[0]->interfaces);
+    }
+
+    public function test_finds_job_that_implements_interface_extending_job_interface(): void
+    {
+        $file = $this->fixture('Contracted.php', <<<'PHP'
+        <?php
+        class Contracted implements \IdempotencyLinter\Tests\Fixtures\Jobs\QueueableContract {}
+        PHP);
+
+        $this->assertCount(1, (new JobFinder)->findInFile($file));
+    }
+
+    public function test_inheritance_cycles_do_not_loop_or_match(): void
+    {
+        $file = $this->fixture('Cycle.php', <<<'PHP'
+        <?php
+        class A extends B {}
+        class B extends A {}
+        PHP);
+
+        $this->assertSame([], (new JobFinder)->findInFile($file));
+    }
+
+    public function test_unrelated_parent_from_another_file_is_not_a_job(): void
+    {
+        $file = $this->fixture('NotJob.php', <<<'PHP'
+        <?php
+        class NotJob extends \ArrayObject {}
         PHP);
 
         $this->assertSame([], (new JobFinder)->findInFile($file));
@@ -132,5 +197,26 @@ final class JobFinderTest extends TestCase
         $files = (new JobFinder)->phpFiles([$this->fixtureDir(), $a, '/caminho/inexistente']);
 
         $this->assertSame([$a, $b], $files);
+    }
+
+    public function test_inherits_interfaces_from_ancestors_in_the_same_file(): void
+    {
+        $file = $this->fixture('Inherited.php', <<<'PHP'
+        <?php
+        namespace App\Jobs;
+
+        use Illuminate\Contracts\Queue\ShouldBeUnique;
+        use Illuminate\Contracts\Queue\ShouldQueue;
+
+        abstract class Base implements ShouldQueue, ShouldBeUnique {}
+        class Leaf extends Base {}
+        PHP);
+
+        $jobs = (new JobFinder)->findInFile($file);
+        $leaf = $jobs[1];
+
+        $this->assertSame('App\Jobs\Leaf', $leaf->className);
+        $this->assertSame('App\Jobs\Base', $leaf->parent);
+        $this->assertTrue($leaf->implements('Illuminate\Contracts\Queue\ShouldBeUnique'));
     }
 }
