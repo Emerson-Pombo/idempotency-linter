@@ -8,8 +8,6 @@ use PhpParser\Node;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
-use PhpParser\Node\Expr\PropertyFetch;
-use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeFinder;
@@ -19,6 +17,10 @@ use PhpParser\NodeFinder;
  */
 final class CallCollector
 {
+    public function __construct(private readonly ReceiverTypes $receivers = new ReceiverTypes())
+    {
+    }
+
     /** @return list<Call> */
     public function collect(ClassMethod $method, TypeMap $types): array
     {
@@ -85,7 +87,7 @@ final class CallCollector
             return null;
         }
 
-        $type = $this->receiverType($node->var, $types);
+        $type = $this->receivers->typeOf($node->var, $types);
 
         if ($type === null) {
             return null;
@@ -100,23 +102,6 @@ final class CallCollector
             $node->getEndFilePos(),
             $node->getStartLine(),
         );
-    }
-
-    /** Só receptores simples: $this->propriedade ou $parametro. */
-    private function receiverType(Node\Expr $receiver, TypeMap $types): ?string
-    {
-        if ($receiver instanceof PropertyFetch
-            && $receiver->var instanceof Variable
-            && $receiver->var->name === 'this'
-            && $receiver->name instanceof Node\Identifier) {
-            return $types->property($receiver->name->toString());
-        }
-
-        if ($receiver instanceof Variable && is_string($receiver->name)) {
-            return $types->variable($receiver->name);
-        }
-
-        return null;
     }
 
     private function arrayLiteral(Array_ $node): ?Call

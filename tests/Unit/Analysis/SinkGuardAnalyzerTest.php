@@ -290,4 +290,71 @@ final class SinkGuardAnalyzerTest extends TestCase
         $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
         $this->assertStringNotContainsString('parcial', $findings[0]->message);
     }
+
+    /** @return list<string> */
+    private function sinks(string $body, string $extra = ''): array
+    {
+        return array_map(fn ($f) => $f->sink, $this->analyze($this->job($body, $extra)));
+    }
+
+    public function test_flags_send_chained_on_mail_facade(): void
+    {
+        $this->assertSame(['mail'], $this->sinks('Mail::to($user)->send($mailable);'));
+    }
+
+    public function test_follows_long_mail_chain(): void
+    {
+        $this->assertSame(['mail'], $this->sinks('Mail::to($user)->cc($a)->bcc($b)->locale("pt")->send($mailable);'));
+    }
+
+    public function test_chained_mail_sink_reports_line_of_the_chain_start(): void
+    {
+        $findings = $this->analyze($this->job("Mail::to(\$user)\n    ->send(\$mailable);"));
+
+        $this->assertSame(15, $findings[0]->line);
+    }
+
+    public function test_guard_before_chained_sink_protects_it(): void
+    {
+        $this->assertSame([], $this->sinks("Cache::add('k', 1);\nMail::to(\$user)->send(\$mailable);"));
+    }
+
+    public function test_ignores_non_sink_methods_at_the_end_of_a_chain(): void
+    {
+        $this->assertSame([], $this->sinks('Mail::to($user)->queue($mailable); Mail::to($user)->later(1, $mailable);'));
+    }
+
+    public function test_flags_post_chained_on_http_facade(): void
+    {
+        $this->assertSame(['http'], $this->sinks("Http::withToken(\$t)->acceptJson()->timeout(5)->post('u', []);"));
+    }
+
+    public function test_http_get_chain_is_not_a_sink(): void
+    {
+        $this->assertSame([], $this->sinks("Http::withHeaders(['A' => 'b'])->get('u');"));
+    }
+
+    public function test_idempotency_key_in_chain_headers_protects_http_sink(): void
+    {
+        $this->assertSame([], $this->sinks("Http::withHeaders(['Idempotency-Key' => \$k])->post('u', []);"));
+    }
+
+    public function test_flags_anonymous_notification_chain(): void
+    {
+        $code = str_replace('use Illuminate\\Support\\Facades\\Mail;', 'use Illuminate\\Support\\Facades\\Mail; use Illuminate\\Support\\Facades\\Notification;', $this->job("Notification::route('mail', \$to)->notify(\$n);"));
+
+        $this->assertSame(['notification'], array_map(fn ($f) => $f->sink, $this->analyze($code)));
+    }
+
+    public function test_follows_chain_that_starts_at_typed_property(): void
+    {
+        $extra = 'public function __construct(private \\Illuminate\\Http\\Client\\PendingRequest $http) {}';
+
+        $this->assertSame(['http'], $this->sinks("\$this->http->withToken(\$t)->post('u', []);", $extra));
+    }
+
+    public function test_unknown_chain_steps_are_ignored(): void
+    {
+        $this->assertSame([], $this->sinks('$foo->to($u)->send($m); Mail::desconhecido($u)->send($m); Http::withToken($t)->desconhecido()->post("u", []);'));
+    }
 }

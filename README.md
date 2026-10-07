@@ -47,10 +47,12 @@ Para cada job `ShouldQueue`, o linter lê o corpo do `handle()` e:
 
 Métodos são reconhecidos quando o tipo do objeto é conhecido: chamadas estáticas (`Mail::send()`), funções, e métodos em propriedades (inclusive promovidas no construtor) ou parâmetros do `handle()` com **tipo declarado** (`$this->stripe->create()` com `PaymentIntentService $stripe`). Subclasses, interfaces e traits do catálogo também casam (`Invoice::create()` com `Invoice extends Model`).
 
+Encadeamentos são seguidos quando estão declarados no catálogo `chains`, que diz qual tipo cada método devolve. Por padrão cobrem `Mail::to($u)->cc($c)->send($m)`, `Http::withToken($t)->acceptJson()->post($url)` e `Notification::route('mail', $to)->notify($n)`. A linha reportada é a do início do encadeamento.
+
 ### Limitações da v1
 
 - Só o corpo do `handle()` é analisado: efeitos colaterais em métodos privados ou em serviços injetados não são vistos.
-- Sem inferência de tipos: variáveis locais, propriedades sem tipo e chamadas encadeadas (`Mail::to($user)->send($mailable)`) são ignoradas, sem erro.
+- Sem inferência de tipos: variáveis locais, propriedades sem tipo e encadeamentos que não estão no catálogo `chains` (por exemplo `app(Foo::class)->send()`) são ignorados, sem erro.
 - Um guard conta apenas pela posição no código; um guard dentro de um `if` sem relação com o sink protege o sink mesmo assim.
 - Jobs que herdam a interface de uma classe base (`extends BaseJob`) não são detectados.
 
@@ -83,16 +85,16 @@ O comando sai com código `1` se houver algum achado no nível de `--fail-on` ou
 php artisan vendor:publish --tag=idempotency-linter-config
 ```
 
-Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de **sinks** (efeitos colaterais: pagamento, e-mail, notificação, HTTP, inserção no banco) e **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, chave de idempotência, `ShouldBeUnique`). O formato desses catálogos ainda vai mudar. Em regras `function`, os nomes das funções vão na chave `functions` (ou `methods`).
+Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de **sinks** (efeitos colaterais: pagamento, e-mail, notificação, HTTP, inserção no banco), **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, chave de idempotência, `ShouldBeUnique`) e **chains** (encadeamentos conhecidos). O formato desses catálogos ainda vai mudar. Em regras `function`, os nomes das funções vão na chave `functions` (ou `methods`).
 
 ## Roadmap
 
 - [x] Estrutura base: ServiceProvider, config publicável, comando `idempotency:scan`, localização de jobs `ShouldQueue`
 - [x] Motor de análise: detectar sinks dentro de `handle()`
 - [x] Detectar guards e decidir se protegem cada sink
+- [x] Resolver chamadas encadeadas declaradas no catálogo (`Mail::to()->send()`, `Http::withToken()->post()`)
 - [ ] Seguir métodos privados e serviços injetados a partir do `handle()`
 - [ ] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
-- [ ] Resolver chamadas encadeadas (`Mail::to()->send()`)
 - [ ] Saída JSON para CI
 
 ## Contribuindo

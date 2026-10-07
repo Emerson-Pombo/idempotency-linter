@@ -45,7 +45,7 @@ final class LimitationsTest extends TestCase
 
     public function test_chained_calls_with_unknown_receiver_are_not_detected(): void
     {
-        $code = $this->job('public function handle(): void { Mail::to($user)->send($mailable); }');
+        $code = $this->job('public function handle(): void { $this->mailer->to($user)->send($mailable); app(\Foo::class)->send($mailable); }');
 
         $this->assertSame([], $this->analyze($code));
     }

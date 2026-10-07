@@ -75,4 +75,33 @@ final class CatalogTest extends TestCase
 
         Catalog::fromConfig(['guards' => ['x' => ['match' => [['type' => 'magic']]]]]);
     }
+
+    public function test_builds_chains(): void
+    {
+        $catalog = Catalog::fromConfig([
+            'chains' => [
+                ['class' => '\Mail', 'methods' => ['to', 'cc'], 'returns' => '\PendingMail'],
+            ],
+        ]);
+
+        $this->assertCount(1, $catalog->chains);
+        $this->assertSame('Mail', $catalog->chains[0]->class);
+        $this->assertSame(['to', 'cc'], $catalog->chains[0]->methods);
+        $this->assertSame('PendingMail', $catalog->chains[0]->returns);
+    }
+
+    public function test_package_config_declares_chains(): void
+    {
+        $catalog = Catalog::fromConfig(require __DIR__.'/../../../config/idempotency-linter.php');
+
+        $this->assertNotEmpty($catalog->chains);
+    }
+
+    public function test_rejects_chain_without_returns(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('returns');
+
+        Catalog::fromConfig(['chains' => [['class' => 'Mail', 'methods' => ['to']]]]);
+    }
 }

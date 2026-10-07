@@ -12,6 +12,7 @@ use IdempotencyLinter\Analysis\Matching\Call;
 use IdempotencyLinter\Analysis\Matching\CallCollector;
 use IdempotencyLinter\Analysis\Matching\CallKind;
 use IdempotencyLinter\Analysis\Matching\ClassMatcher;
+use IdempotencyLinter\Analysis\Matching\ReceiverTypes;
 use IdempotencyLinter\Analysis\Matching\RuleMatcher;
 use IdempotencyLinter\Analysis\Matching\TypeMap;
 use IdempotencyLinter\Report\Finding;
@@ -24,12 +25,18 @@ use IdempotencyLinter\Report\Finding;
  */
 final class SinkGuardAnalyzer implements JobAnalyzer
 {
+    private readonly RuleMatcher $matcher;
+
+    private readonly CallCollector $collector;
+
     public function __construct(
         private readonly Catalog $catalog,
-        private readonly CallCollector $collector = new CallCollector(),
         private readonly ClassMatcher $classes = new ClassMatcher(),
-        private readonly RuleMatcher $matcher = new RuleMatcher(),
+        ?RuleMatcher $matcher = null,
+        ?CallCollector $collector = null,
     ) {
+        $this->matcher = $matcher ?? new RuleMatcher($classes);
+        $this->collector = $collector ?? new CallCollector(new ReceiverTypes($catalog->chains, $classes));
     }
 
     /** @return list<Finding> */

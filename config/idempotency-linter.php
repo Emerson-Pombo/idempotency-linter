@@ -18,11 +18,23 @@
 |   - array_key   : array literal com a chave string (sem diferenciar maiúsculas). Chave "keys". Só para guards.
 |   - interface   : a classe do job implementa a interface (só para guards).
 |
+| "chains" ensinam o linter a seguir encadeamentos sem inferir tipos: chamar um
+| dos "methods" em "class" (estaticamente, como numa facade, ou em uma instância
+| desse tipo) devolve um objeto do tipo "returns". Ex.: Mail::to($u)->send($m).
+|
 | Guards com 'partial' => true reduzem o risco em um nível em vez de eliminar o achado.
 |
 | Risco: 'high' | 'medium' | 'low'
 |
 */
+
+// Métodos de PendingRequest (cliente HTTP do Laravel) que devolvem o próprio objeto.
+$httpFluent = [
+    'withHeaders', 'withHeader', 'withToken', 'withBasicAuth', 'withDigestAuth', 'withUserAgent',
+    'withOptions', 'withBody', 'withQueryParameters', 'withUrlParameters', 'withCookies', 'withoutVerifying',
+    'accept', 'acceptJson', 'asJson', 'asForm', 'asMultipart', 'contentType', 'attach',
+    'timeout', 'connectTimeout', 'retry', 'baseUrl', 'throw',
+];
 
 return [
 
@@ -67,6 +79,7 @@ return [
             'match' => [
                 ['type' => 'static_call', 'class' => 'Illuminate\Support\Facades\Notification', 'methods' => ['send', 'sendNow']],
                 ['type' => 'method_call', 'class' => 'Illuminate\Notifications\Notifiable', 'methods' => ['notify', 'notifyNow']],
+                ['type' => 'method_call', 'class' => 'Illuminate\Notifications\AnonymousNotifiable', 'methods' => ['notify', 'notifyNow']],
             ],
         ],
 
@@ -125,6 +138,22 @@ return [
                 ['type' => 'interface', 'class' => 'Illuminate\Contracts\Queue\ShouldBeUnique'],
             ],
         ],
+
+    ],
+
+    'chains' => [
+
+        // E-mail: Mail::to($u)->cc($c)->send($m)
+        ['class' => 'Illuminate\Support\Facades\Mail', 'methods' => ['to', 'cc', 'bcc'], 'returns' => 'Illuminate\Mail\PendingMail'],
+        ['class' => 'Illuminate\Mail\PendingMail', 'methods' => ['to', 'cc', 'bcc', 'locale'], 'returns' => 'Illuminate\Mail\PendingMail'],
+
+        // HTTP: Http::withToken($t)->acceptJson()->post($url)
+        ['class' => 'Illuminate\Support\Facades\Http', 'methods' => $httpFluent, 'returns' => 'Illuminate\Http\Client\PendingRequest'],
+        ['class' => 'Illuminate\Http\Client\PendingRequest', 'methods' => $httpFluent, 'returns' => 'Illuminate\Http\Client\PendingRequest'],
+
+        // Notificação sob demanda: Notification::route('mail', $to)->notify($n)
+        ['class' => 'Illuminate\Support\Facades\Notification', 'methods' => ['route'], 'returns' => 'Illuminate\Notifications\AnonymousNotifiable'],
+        ['class' => 'Illuminate\Notifications\AnonymousNotifiable', 'methods' => ['route'], 'returns' => 'Illuminate\Notifications\AnonymousNotifiable'],
 
     ],
 
