@@ -16,6 +16,11 @@ jobs:
   tests:
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
     runs-on: ubuntu-latest
+    env:
+      # As linhas 10 e 11 do Laravel têm avisos de segurança conhecidos e o Composer
+      # bloqueia a instalação por padrão. Aqui elas são instaladas de propósito, só
+      # para testar a compatibilidade do pacote.
+      COMPOSER_NO_SECURITY_BLOCKING: '1'
     strategy:
       fail-fast: false
       matrix:
