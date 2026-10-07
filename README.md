@@ -68,13 +68,6 @@ Requer PHP 8.1 ou superior e Laravel 10, 11, 12 ou 13.
 composer require --dev emerson-pombo/idempotency-linter
 ```
 
-O pacote ainda não está no Packagist. Enquanto isso, instale direto do repositório:
-
-```bash
-composer config repositories.idempotency-linter vcs https://github.com/Emerson-Pombo/idempotency-linter
-composer require --dev emerson-pombo/idempotency-linter:dev-main
-```
-
 O ServiceProvider é registrado automaticamente (auto-discovery do Laravel).
 
 ## Uso
