@@ -26,12 +26,23 @@ final class LimitationsTest extends TestCase
         PHP;
     }
 
-    public function test_sink_inside_private_method_is_not_detected(): void
+    public function test_methods_of_injected_services_are_not_followed(): void
     {
         $code = $this->job('
-            public function handle(): void { $this->notify(); }
-            private function notify(): void { Mail::send($m); }
+            public function __construct(private \\App\\Services\\Notifier $notifier) {}
+            public function handle(): void { $this->notifier->notify(); }
         ');
+
+        $this->assertSame([], $this->analyze($code));
+    }
+
+    public function test_methods_inherited_from_a_parent_class_are_not_followed(): void
+    {
+        $code = str_replace(
+            'implements \\Illuminate\\Contracts\\Queue\\ShouldQueue',
+            'extends \\IdempotencyLinter\\Tests\\Fixtures\\Jobs\\BaseQueuedJob',
+            $this->job('public function handle(): void { $this->notifyFromParent(); }'),
+        );
 
         $this->assertSame([], $this->analyze($code));
     }

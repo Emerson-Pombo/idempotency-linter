@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Analysis\Matching;
 
 /**
- * Uma chamada (ou array literal) encontrada no corpo do método de entrada.
+ * Uma chamada (ou array literal) encontrada no fluxo de execução do job.
+ *
+ * "order" é a posição da chamada na ordem de execução (visita em pré-ordem, com
+ * o corpo dos métodos seguidos inserido no ponto da chamada). "lastOrder" é a
+ * ordem do último nó dentro dela, o que permite saber se outra chamada está nos
+ * seus argumentos.
  */
 final class Call
 {
@@ -18,8 +23,13 @@ final class Call
         public readonly ?string $class,
         public readonly ?string $name,
         public readonly array $keys,
-        public readonly int $startPos,
-        public readonly int $endPos,
         public readonly int $line,
+        public readonly int $order = 0,
+        public readonly int $lastOrder = 0,
     ) {}
+
+    public function at(int $order, int $lastOrder): self
+    {
+        return new self($this->kind, $this->class, $this->name, $this->keys, $this->line, $order, $lastOrder);
+    }
 }

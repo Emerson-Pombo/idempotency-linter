@@ -10,6 +10,7 @@ use PhpParser\Node\ComplexType;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\NullableType;
+use PhpParser\Node\Stmt\ClassMethod;
 
 /**
  * Tipos declarados do job: propriedades (incluindo promovidas no construtor)
@@ -51,17 +52,15 @@ final class TypeMap
             }
         }
 
-        $variables = [];
-
-        foreach ($job->entryMethod->params ?? [] as $param) {
-            $type = self::className($param->type);
-
-            if ($type !== null && $param->var instanceof Node\Expr\Variable && is_string($param->var->name)) {
-                $variables[$param->var->name] = $type;
-            }
-        }
+        $variables = $job->entryMethod !== null ? self::parameterTypes($job->entryMethod) : [];
 
         return new self($properties, $variables);
+    }
+
+    /** Mesmas propriedades, mas com as variáveis (parâmetros) de outro método. */
+    public function forMethod(ClassMethod $method): self
+    {
+        return new self($this->properties, self::parameterTypes($method));
     }
 
     public function property(string $name): ?string
@@ -72,6 +71,22 @@ final class TypeMap
     public function variable(string $name): ?string
     {
         return $this->variables[$name] ?? null;
+    }
+
+    /** @return array<string, string> */
+    private static function parameterTypes(ClassMethod $method): array
+    {
+        $variables = [];
+
+        foreach ($method->params as $param) {
+            $type = self::className($param->type);
+
+            if ($type !== null && $param->var instanceof Node\Expr\Variable && is_string($param->var->name)) {
+                $variables[$param->var->name] = $type;
+            }
+        }
+
+        return $variables;
     }
 
     private static function className(Identifier|Name|ComplexType|null $type): ?string

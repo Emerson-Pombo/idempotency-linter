@@ -46,17 +46,25 @@ final class SinkGuardAnalyzer implements JobAnalyzer
             return [];
         }
 
-        $calls = $this->collector->collect($job->entryMethod, TypeMap::forJob($job));
+        $calls = $this->collector->collect($job->entryMethod, TypeMap::forJob($job), $job->node);
         $guardCalls = $this->guardCalls($calls, partial: false);
         $partialCalls = $this->guardCalls($calls, partial: true);
         $jobIsPartiallyProtected = $this->guardOfJob($job, partial: true) !== null;
 
         $findings = [];
+        $reported = [];
 
         foreach ($calls as $call) {
             $sink = $this->sinkFor($call);
 
             if ($sink === null || $this->isProtected($call, $guardCalls)) {
+                continue;
+            }
+
+            // Um método seguido a partir de vários pontos gera um achado só.
+            $key = $call->line.'|'.$sink->name;
+
+            if (isset($reported[$key])) {
                 continue;
             }
 
@@ -71,6 +79,8 @@ final class SinkGuardAnalyzer implements JobAnalyzer
 
                 $message .= ' Proteção parcial detectada, que não cobre retry nem reentrega: o risco foi reduzido.';
             }
+
+            $reported[$key] = true;
 
             $findings[] = new Finding(
                 file: $job->file,
@@ -143,7 +153,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     }
 
     /**
-     * Um guard só protege o que aparece depois dele no código-fonte. Arrays
+     * Um guard só protege o que vem depois dele na ordem de execução. Arrays
      * literais (chave de idempotência) também protegem a chamada que os recebe
      * como argumento, que começa antes deles.
      *
@@ -152,9 +162,9 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     private function isProtected(Call $sink, array $guardCalls): bool
     {
         foreach ($guardCalls as $guard) {
-            $limit = $guard->kind === CallKind::ArrayLiteral ? $sink->endPos : $sink->startPos;
+            $limit = $guard->kind === CallKind::ArrayLiteral ? $sink->lastOrder : $sink->order - 1;
 
-            if ($guard->startPos < $limit) {
+            if ($guard->order <= $limit) {
                 return true;
             }
         }
