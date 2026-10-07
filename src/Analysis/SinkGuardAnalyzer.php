@@ -10,6 +10,7 @@ use IdempotencyLinter\Analysis\Catalog\Sink;
 use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 use IdempotencyLinter\Analysis\Matching\Call;
 use IdempotencyLinter\Analysis\Matching\CallCollector;
+use IdempotencyLinter\Analysis\Matching\CallKind;
 use IdempotencyLinter\Analysis\Matching\RuleMatcher;
 use IdempotencyLinter\Report\Finding;
 
@@ -83,14 +84,18 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     }
 
     /**
-     * Um guard só protege o que aparece depois dele no código-fonte.
+     * Um guard só protege o que aparece depois dele no código-fonte. Arrays
+     * literais (chave de idempotência) também protegem a chamada que os recebe
+     * como argumento, que começa antes deles.
      *
      * @param list<Call> $guardCalls
      */
     private function isProtected(Call $sink, array $guardCalls): bool
     {
         foreach ($guardCalls as $guard) {
-            if ($guard->startPos < $sink->startPos) {
+            $limit = $guard->kind === CallKind::ArrayLiteral ? $sink->endPos : $sink->startPos;
+
+            if ($guard->startPos < $limit) {
                 return true;
             }
         }

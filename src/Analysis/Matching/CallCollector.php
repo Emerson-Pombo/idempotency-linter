@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace IdempotencyLinter\Analysis\Matching;
 
 use PhpParser\Node;
+use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Stmt\ClassMethod;
@@ -20,7 +21,7 @@ final class CallCollector
     {
         $nodes = (new NodeFinder())->find(
             $method->stmts ?? [],
-            fn (Node $node) => $node instanceof StaticCall || $node instanceof FuncCall,
+            fn (Node $node) => $node instanceof StaticCall || $node instanceof FuncCall || $node instanceof Array_,
         );
 
         $calls = [];
@@ -29,6 +30,7 @@ final class CallCollector
             $call = match (true) {
                 $node instanceof StaticCall => $this->staticCall($node),
                 $node instanceof FuncCall => $this->functionCall($node),
+                $node instanceof Array_ => $this->arrayLiteral($node),
             };
 
             if ($call !== null) {
@@ -67,6 +69,31 @@ final class CallCollector
             null,
             ltrim($node->name->toString(), '\\'),
             [],
+            $node->getStartFilePos(),
+            $node->getEndFilePos(),
+            $node->getStartLine(),
+        );
+    }
+
+    private function arrayLiteral(Array_ $node): ?Call
+    {
+        $keys = [];
+
+        foreach ($node->items as $item) {
+            if ($item->key instanceof Node\Scalar\String_) {
+                $keys[] = $item->key->value;
+            }
+        }
+
+        if ($keys === []) {
+            return null;
+        }
+
+        return new Call(
+            CallKind::ArrayLiteral,
+            null,
+            null,
+            $keys,
             $node->getStartFilePos(),
             $node->getEndFilePos(),
             $node->getStartLine(),

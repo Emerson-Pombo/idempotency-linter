@@ -113,4 +113,39 @@ final class SinkGuardAnalyzerTest extends TestCase
         $this->assertSame([], $this->analyze($this->job("Model::firstOrCreate(['id' => 1]);\nMail::send(\$m);")));
         $this->assertSame([], $this->analyze($this->job("Model::updateOrCreate(['id' => 1]);\nMail::send(\$m);")));
     }
+
+    public function test_idempotency_key_in_sink_arguments_protects_it(): void
+    {
+        $body = "\\Stripe\\Charge::create(['amount' => 1], ['idempotency_key' => \$key]);";
+
+        $this->assertSame([], $this->analyze($this->job($body)));
+    }
+
+    public function test_idempotency_key_array_before_sink_protects_it(): void
+    {
+        $body = "\$opts = ['Idempotency-Key' => \$key];\n\\Stripe\\Charge::create(['amount' => 1], \$opts);";
+
+        $this->assertSame([], $this->analyze($this->job($body)));
+    }
+
+    public function test_header_name_is_case_insensitive(): void
+    {
+        $body = "Http::withHeaders(['idempotency-key' => \$key])->post('u', []);";
+
+        $this->assertSame([], $this->analyze($this->job($body)));
+    }
+
+    public function test_array_with_other_keys_does_not_protect(): void
+    {
+        $findings = $this->analyze($this->job("\\Stripe\\Charge::create(['amount' => 1], ['expand' => ['x']]);"));
+
+        $this->assertSame(['payment'], array_map(fn ($f) => $f->sink, $findings));
+    }
+
+    public function test_idempotency_key_array_after_sink_does_not_protect(): void
+    {
+        $findings = $this->analyze($this->job("\\Stripe\\Charge::create(['amount' => 1]);\n\$opts = ['idempotency_key' => 1];"));
+
+        $this->assertCount(1, $findings);
+    }
 }

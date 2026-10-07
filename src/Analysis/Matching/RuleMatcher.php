@@ -22,6 +22,7 @@ final class RuleMatcher
                 && $this->classMatches($call, $rule)
                 && $this->nameIn($call, $rule->methods),
             'function' => $call->kind === CallKind::Function && $this->nameIn($call, $rule->methods),
+            'array_key' => $call->kind === CallKind::ArrayLiteral && $this->hasKey($call, $rule->keys),
             default => false,
         };
     }
@@ -38,5 +39,19 @@ final class RuleMatcher
     {
         return $call->name !== null
             && in_array(strtolower($call->name), array_map('strtolower', $names), true);
+    }
+
+    /** @param list<string> $keys */
+    private function hasKey(Call $call, array $keys): bool
+    {
+        $wanted = array_map('strtolower', $keys);
+
+        foreach ($call->keys as $key) {
+            if (in_array(strtolower($key), $wanted, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
