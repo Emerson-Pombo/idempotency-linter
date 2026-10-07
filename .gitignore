@@ -6,5 +6,5 @@
 .vscode/
 
 # Artefatos de planejamento (spec-driven development)
-/SPEC.md
+/SPEC*.md
 /tasks/

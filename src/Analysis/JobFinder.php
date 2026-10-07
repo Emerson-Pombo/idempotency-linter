@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace IdempotencyLinter\Analysis;
 
+use IdempotencyLinter\Analysis\Matching\ClassMatcher;
 use PhpParser\Error as ParserError;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\Class_;
@@ -19,8 +20,10 @@ use SplFileInfo;
 /**
  * Localiza classes que implementam a interface de job (ShouldQueue por padrão).
  *
- * Limitação atual: só reconhece a interface declarada diretamente na classe
- * (não segue herança nem interfaces que estendem ShouldQueue).
+ * Uma classe é job quando implementa a interface de job, diretamente ou por uma
+ * interface que a estende, ou quando herda de uma classe que é job. Pais no mesmo
+ * arquivo são resolvidos pelo AST; pais em outros arquivos, pelo autoload (sem
+ * instanciar nada). Pai que não carrega não torna a classe um job.
  */
 final class JobFinder
 {
@@ -30,6 +33,7 @@ final class JobFinder
         private readonly string $jobInterface = 'Illuminate\Contracts\Queue\ShouldQueue',
         private readonly string $entryMethod = 'handle',
         ?Parser $parser = null,
+        private readonly ClassMatcher $classes = new ClassMatcher(),
     ) {
         $this->parser = $parser ?? (new ParserFactory())->createForNewestSupportedVersion();
     }
@@ -92,6 +96,14 @@ final class JobFinder
         /** @var list<Class_> $classes */
         $classes = (new NodeFinder())->findInstanceOf($ast, Class_::class);
 
+        $declared = [];
+
+        foreach ($classes as $class) {
+            if ($class->name !== null) {
+                $declared[strtolower($this->fullName($class))] = $class;
+            }
+        }
+
         $jobs = [];
 
         foreach ($classes as $class) {
@@ -99,18 +111,18 @@ final class JobFinder
                 continue; // classe anônima
             }
 
+            if (! $this->isJob($class, $declared)) {
+                continue;
+            }
+
             $interfaces = array_map(
                 fn (Node\Name $name) => $name->toString(),
                 $class->implements,
             );
 
-            if (! in_array(ltrim($this->jobInterface, '\\'), $interfaces, true)) {
-                continue;
-            }
-
             $jobs[] = new JobClass(
                 file: $file,
-                className: $class->namespacedName?->toString() ?? $class->name->toString(),
+                className: $this->fullName($class),
                 line: $class->getStartLine(),
                 interfaces: $interfaces,
                 node: $class,
@@ -119,5 +131,42 @@ final class JobFinder
         }
 
         return $jobs;
+    }
+
+    /**
+     * @param array<string, Class_> $declared classes nomeadas do arquivo, por nome completo em minúsculas
+     * @param array<string, true> $seen para não entrar em loop em heranças cíclicas
+     */
+    private function isJob(Class_ $class, array $declared, array $seen = []): bool
+    {
+        $key = strtolower($this->fullName($class));
+
+        if (isset($seen[$key])) {
+            return false;
+        }
+
+        $seen[$key] = true;
+
+        foreach ($class->implements as $interface) {
+            if ($this->classes->matches($interface->toString(), $this->jobInterface)) {
+                return true;
+            }
+        }
+
+        if ($class->extends === null) {
+            return false;
+        }
+
+        $parent = $class->extends->toString();
+        $local = $declared[strtolower($parent)] ?? null;
+
+        return $local !== null
+            ? $this->isJob($local, $declared, $seen)
+            : $this->classes->matches($parent, $this->jobInterface);
+    }
+
+    private function fullName(Class_ $class): string
+    {
+        return $class->namespacedName?->toString() ?? $class->name?->toString() ?? '';
     }
 }
