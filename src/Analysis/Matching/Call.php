@@ -23,6 +23,7 @@ final class Call
         public readonly ?string $class,
         public readonly ?string $name,
         public readonly array $keys,
+        public readonly string $file,
         public readonly int $line,
         public readonly int $order = 0,
         public readonly int $lastOrder = 0,
@@ -30,6 +31,6 @@ final class Call
 
     public function at(int $order, int $lastOrder): self
     {
-        return new self($this->kind, $this->class, $this->name, $this->keys, $this->line, $order, $lastOrder);
+        return new self($this->kind, $this->class, $this->name, $this->keys, $this->file, $this->line, $order, $lastOrder);
     }
 }

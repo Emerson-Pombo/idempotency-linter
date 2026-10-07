@@ -8,6 +8,7 @@ use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 use IdempotencyLinter\Analysis\JobClass;
 use IdempotencyLinter\Report\Finding;
 use IdempotencyLinter\Report\RiskLevel;
+use IdempotencyLinter\Tests\Fixtures\Services\Notifier;
 use IdempotencyLinter\Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
 
@@ -308,5 +309,34 @@ final class ScanCommandTest extends TestCase
         $this->artisan('idempotency:scan', ['paths' => [$this->fixture('Risky.php', self::RISKY_JOB)]])
             ->expectsOutputToContain('MÉDIO RISCO')
             ->assertExitCode(1);
+    }
+
+    public function test_scan_reports_sink_in_injected_service_with_its_file_and_the_job(): void
+    {
+        $file = $this->fixture('Cobrar.php', <<<'PHP'
+        <?php
+        namespace App\Jobs;
+
+        class Cobrar implements \Illuminate\Contracts\Queue\ShouldQueue
+        {
+            public function __construct(private \IdempotencyLinter\Tests\Fixtures\Services\Notifier $notifier) {}
+
+            public function handle(): void
+            {
+                $this->notifier->send();
+            }
+        }
+        PHP);
+        $service = (new \ReflectionClass(Notifier::class))->getFileName();
+
+        $this->artisan('idempotency:scan', ['paths' => [$file]])
+            ->expectsOutputToContain($service.':15')
+            ->expectsOutputToContain('Job: App\Jobs\Cobrar')
+            ->assertExitCode(1);
+
+        [, $report] = $this->scanJson(['paths' => [$file]]);
+
+        $this->assertSame($service, $report['findings'][0]['file']);
+        $this->assertSame('App\Jobs\Cobrar', $report['findings'][0]['job']);
     }
 }

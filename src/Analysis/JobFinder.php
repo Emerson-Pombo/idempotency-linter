@@ -126,6 +126,7 @@ final class JobFinder
                 node: $class,
                 entryMethod: $class->getMethod($this->entryMethod),
                 parent: $class->extends?->toString(),
+                entryName: $this->entryMethod,
             );
         }
 

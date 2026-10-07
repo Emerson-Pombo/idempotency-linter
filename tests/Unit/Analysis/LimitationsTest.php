@@ -26,23 +26,16 @@ final class LimitationsTest extends TestCase
         PHP;
     }
 
-    public function test_methods_of_injected_services_are_not_followed(): void
+    public function test_services_resolved_from_the_container_are_not_followed(): void
     {
-        $code = $this->job('
-            public function __construct(private \\App\\Services\\Notifier $notifier) {}
-            public function handle(): void { $this->notifier->notify(); }
-        ');
+        $code = $this->job('public function handle(): void { app(\\IdempotencyLinter\\Tests\\Fixtures\\Services\\Notifier::class)->send(); }');
 
         $this->assertSame([], $this->analyze($code));
     }
 
-    public function test_methods_inherited_from_a_parent_class_are_not_followed(): void
+    public function test_services_held_in_local_variables_are_not_followed(): void
     {
-        $code = str_replace(
-            'implements \\Illuminate\\Contracts\\Queue\\ShouldQueue',
-            'extends \\IdempotencyLinter\\Tests\\Fixtures\\Jobs\\BaseQueuedJob',
-            $this->job('public function handle(): void { $this->notifyFromParent(); }'),
-        );
+        $code = $this->job('public function handle(): void { $notifier = new \\IdempotencyLinter\\Tests\\Fixtures\\Services\\Notifier; $notifier->send(); }');
 
         $this->assertSame([], $this->analyze($code));
     }

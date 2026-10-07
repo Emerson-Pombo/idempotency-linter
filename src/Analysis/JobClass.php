@@ -23,6 +23,7 @@ final class JobClass
         public readonly Class_ $node,
         public readonly ?ClassMethod $entryMethod,
         public readonly ?string $parent = null,
+        public readonly string $entryName = 'handle',
     ) {}
 
     public function implements(string $interface): bool

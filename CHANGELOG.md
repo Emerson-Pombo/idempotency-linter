@@ -4,6 +4,17 @@ Todas as mudanças relevantes deste projeto são documentadas aqui.
 
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [versionamento semântico](https://semver.org/lang/pt-BR/). Enquanto a versão for `0.x`, os catálogos de detecção e a saída podem mudar entre versões menores.
 
+## [Não lançado]
+
+### Adicionado
+
+- A análise segue o código do projeto para fora da classe do job: serviços injetados com tipo concreto declarado (`$this->servico->metodo()`, parâmetros do `handle()` e chamadas estáticas a classes do projeto), métodos herdados da classe pai (`$this->metodo()`, `parent::metodo()` e `handle()` herdado) e métodos de traits do projeto, além de propriedades tipadas vindas do pai ou de traits.
+- O achado aponta o arquivo e a linha reais do sink, e a saída em texto passa a mostrar o job que o alcança (`Job: ...`).
+
+### Limitações conhecidas
+
+- Dependências tipadas por interface, serviços obtidos do container (`app(...)`) e classes de `vendor/` não são seguidos.
+
 ## [0.1.0] - 2026-10-07
 
 Primeira versão pública.
