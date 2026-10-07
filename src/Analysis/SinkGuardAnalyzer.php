@@ -11,6 +11,7 @@ use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 use IdempotencyLinter\Analysis\Matching\Call;
 use IdempotencyLinter\Analysis\Matching\CallCollector;
 use IdempotencyLinter\Analysis\Matching\CallKind;
+use IdempotencyLinter\Analysis\Matching\ClassMatcher;
 use IdempotencyLinter\Analysis\Matching\RuleMatcher;
 use IdempotencyLinter\Analysis\Matching\TypeMap;
 use IdempotencyLinter\Report\Finding;
@@ -26,6 +27,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     public function __construct(
         private readonly Catalog $catalog,
         private readonly CallCollector $collector = new CallCollector(),
+        private readonly ClassMatcher $classes = new ClassMatcher(),
         private readonly RuleMatcher $matcher = new RuleMatcher(),
     ) {
     }
@@ -33,12 +35,14 @@ final class SinkGuardAnalyzer implements JobAnalyzer
     /** @return list<Finding> */
     public function analyze(JobClass $job): array
     {
-        if ($job->entryMethod === null) {
+        if ($job->entryMethod === null || $this->guardOfJob($job, partial: false) !== null) {
             return [];
         }
 
         $calls = $this->collector->collect($job->entryMethod, TypeMap::forJob($job));
-        $guardCalls = array_values(array_filter($calls, $this->isGuard(...)));
+        $guardCalls = $this->guardCalls($calls, partial: false);
+        $partialCalls = $this->guardCalls($calls, partial: true);
+        $jobIsPartiallyProtected = $this->guardOfJob($job, partial: true) !== null;
 
         $findings = [];
 
@@ -49,13 +53,25 @@ final class SinkGuardAnalyzer implements JobAnalyzer
                 continue;
             }
 
+            $risk = $sink->risk;
+            $message = $sink->message;
+            if ($jobIsPartiallyProtected || $this->isProtected($call, $partialCalls)) {
+                $risk = $risk->lower();
+
+                if ($risk === null) {
+                    continue;
+                }
+
+                $message .= ' Proteção parcial detectada, que não cobre retry nem reentrega: o risco foi reduzido.';
+            }
+
             $findings[] = new Finding(
                 file: $job->file,
                 line: $call->line,
                 jobClass: $job->className,
                 sink: $sink->name,
-                risk: $sink->risk,
-                message: $sink->message,
+                risk: $risk,
+                message: $message,
             );
         }
 
@@ -73,10 +89,45 @@ final class SinkGuardAnalyzer implements JobAnalyzer
         return null;
     }
 
-    private function isGuard(Call $call): bool
+    /**
+     * @param list<Call> $calls
+     * @return list<Call>
+     */
+    private function guardCalls(array $calls, bool $partial): array
+    {
+        return array_values(array_filter($calls, function (Call $call) use ($partial): bool {
+            foreach ($this->catalog->guards as $guard) {
+                if ($guard->partial === $partial && $this->matchesAny($guard->rules, $call)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+    }
+
+    /** Guard do tipo "interface": vale para o job inteiro, não para uma chamada. */
+    private function guardOfJob(JobClass $job, bool $partial): ?string
     {
         foreach ($this->catalog->guards as $guard) {
-            if (! $guard->partial && $this->matchesAny($guard->rules, $call)) {
+            if ($guard->partial !== $partial) {
+                continue;
+            }
+
+            foreach ($guard->rules as $rule) {
+                if ($rule->type === 'interface' && $rule->class !== null && $this->jobImplements($job, $rule->class)) {
+                    return $guard->name;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function jobImplements(JobClass $job, string $interface): bool
+    {
+        foreach ($job->interfaces as $implemented) {
+            if ($this->classes->matches($implemented, $interface)) {
                 return true;
             }
         }

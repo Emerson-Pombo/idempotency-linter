@@ -235,4 +235,59 @@ final class SinkGuardAnalyzerTest extends TestCase
 
         $this->assertSame(['notification'], array_map(fn ($f) => $f->sink, $findings));
     }
+
+    private function unique(string $body, string $extra = '', string $interface = 'ShouldBeUnique'): string
+    {
+        return str_replace(
+            'implements ShouldQueue',
+            'implements ShouldQueue, \\Illuminate\\Contracts\\Queue\\'.$interface,
+            $this->job($body, $extra),
+        );
+    }
+
+    public function test_should_be_unique_lowers_high_risk_to_medium(): void
+    {
+        $extra = 'public function __construct(private \\Stripe\\Service\\ChargeService $charges) {}';
+
+        $findings = $this->analyze($this->unique('$this->charges->create([]);', $extra));
+
+        $this->assertCount(1, $findings);
+        $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
+        $this->assertStringContainsString('Chamada a gateway de pagamento', $findings[0]->message);
+        $this->assertStringContainsString('Proteção parcial', $findings[0]->message);
+    }
+
+    public function test_should_be_unique_lowers_medium_risk_to_low(): void
+    {
+        $findings = $this->analyze($this->unique('Mail::send($m);'));
+
+        $this->assertSame(RiskLevel::Low, $findings[0]->risk);
+    }
+
+    public function test_should_be_unique_removes_low_risk_findings(): void
+    {
+        $body = '\\IdempotencyLinter\\Tests\\Fixtures\\Models\\Invoice::create([]);';
+
+        $this->assertSame([], $this->analyze($this->unique($body)));
+    }
+
+    public function test_interface_extending_should_be_unique_counts_as_partial(): void
+    {
+        $findings = $this->analyze($this->unique('Mail::send($m);', '', 'ShouldBeUniqueUntilProcessing'));
+
+        $this->assertSame(RiskLevel::Low, $findings[0]->risk);
+    }
+
+    public function test_total_guard_still_removes_finding_for_unique_job(): void
+    {
+        $this->assertSame([], $this->analyze($this->unique("Cache::add('k', 1);\nMail::send(\$m);")));
+    }
+
+    public function test_job_without_should_be_unique_keeps_original_risk(): void
+    {
+        $findings = $this->analyze($this->job('Mail::send($m);'));
+
+        $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
+        $this->assertStringNotContainsString('parcial', $findings[0]->message);
+    }
 }
