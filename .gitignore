@@ -4,3 +4,7 @@
 .phpunit.result.cache
 .idea/
 .vscode/
+
+# Artefatos de planejamento (spec-driven development)
+/SPEC.md
+/tasks/

@@ -6,7 +6,8 @@ namespace IdempotencyLinter;
 
 use IdempotencyLinter\Analysis\Contracts\JobAnalyzer;
 use IdempotencyLinter\Analysis\JobFinder;
-use IdempotencyLinter\Analysis\NullAnalyzer;
+use IdempotencyLinter\Analysis\Catalog\Catalog;
+use IdempotencyLinter\Analysis\SinkGuardAnalyzer;
 use IdempotencyLinter\Console\ScanCommand;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,8 +22,9 @@ final class IdempotencyLinterServiceProvider extends ServiceProvider
             entryMethod: $app['config']->get('idempotency-linter.entry_method', 'handle'),
         ));
 
-        // TODO: trocar pelo motor de sinks/guards.
-        $this->app->bind(JobAnalyzer::class, NullAnalyzer::class);
+        $this->app->bind(JobAnalyzer::class, fn ($app) => new SinkGuardAnalyzer(
+            Catalog::fromConfig($app['config']->get('idempotency-linter', [])),
+        ));
 
         $this->app->bind(Scanner::class);
     }
