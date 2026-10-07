@@ -4,7 +4,7 @@ Todas as mudanças relevantes deste projeto são documentadas aqui.
 
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [versionamento semântico](https://semver.org/lang/pt-BR/). Enquanto a versão for `0.x`, os catálogos de detecção e a saída podem mudar entre versões menores.
 
-## [0.1.0] - não lançado
+## [0.1.0] - 2026-10-07
 
 Primeira versão pública.
 
