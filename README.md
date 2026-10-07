@@ -62,7 +62,7 @@ Para resolver subclasses e traits, o linter carrega as classes do seu projeto pe
 
 ## Instalação
 
-Requer PHP 8.1 ou superior e Laravel 10, 11 ou 12.
+Requer PHP 8.1 ou superior e Laravel 10, 11, 12 ou 13.
 
 ```bash
 composer require --dev emerson-pombo/idempotency-linter
@@ -161,7 +161,7 @@ composer check     # estilo (Pint) + análise estática (PHPStan nível 6) + tes
 composer format    # aplica o estilo automaticamente
 ```
 
-O CI roda os testes em PHP 8.1 a 8.3 com Laravel 10, 11 e 12 (combinações compatíveis), além de Pint e PHPStan.
+O CI roda os testes em PHP 8.1 a 8.3 com Laravel 10, 11, 12 e 13 (combinações compatíveis), além de Pint e PHPStan.
 
 ## Contribuindo
 

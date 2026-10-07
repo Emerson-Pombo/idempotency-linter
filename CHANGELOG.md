@@ -18,7 +18,7 @@ Primeira versão pública.
 - Resolução de tipos declarados (propriedades, propriedades promovidas e parâmetros), de subclasses, interfaces e traits do catálogo (via autoload) e de encadeamentos declarados em `chains` (`Mail::to()->send()`, `Http::withToken()->post()`, `Notification::route()->notify()`).
 - Relatório de risco (alto, médio, baixo) com arquivo e linha exatos, em texto ou em JSON versionado.
 - Configuração publicável (`php artisan vendor:publish --tag=idempotency-linter-config`).
-- CI com testes em PHP 8.1 a 8.3 e Laravel 10 a 12, Pint e PHPStan (nível 6).
+- Compatível com Laravel 10, 11, 12 e 13 (PHP 8.1 ou superior; o Laravel 13 exige PHP 8.3). CI com testes em PHP 8.1 a 8.3, Pint e PHPStan (nível 6).
 
 ### Limitações conhecidas
 

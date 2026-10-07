@@ -13,7 +13,7 @@ composer install
 composer check
 ```
 
-`composer check` roda o estilo (Pint), a análise estática (PHPStan, nível 6) e os testes. O CI roda o mesmo, mais a matriz PHP 8.1 a 8.3 × Laravel 10 a 12.
+`composer check` roda o estilo (Pint), a análise estática (PHPStan, nível 6) e os testes. O CI roda o mesmo, mais a matriz PHP 8.1 a 8.3 × Laravel 10 a 13.
 
 | Comando | O que faz |
 |---|---|
