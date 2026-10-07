@@ -87,4 +87,27 @@ final class ScanCommandTest extends TestCase
             ->expectsOutputToContain('Caminho não encontrado')
             ->assertExitCode(0);
     }
+
+    public function test_real_analyzer_flags_unprotected_sink(): void
+    {
+        $file = $this->fixture('Mailer.php', <<<'PHP'
+        <?php
+        use Illuminate\Support\Facades\Mail;
+
+        class Mailer implements \Illuminate\Contracts\Queue\ShouldQueue
+        {
+            public function handle(): void
+            {
+                Mail::send($mailable);
+            }
+        }
+        PHP);
+
+        $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'medium'])
+            ->expectsOutputToContain('MÉDIO RISCO')
+            ->assertExitCode(1);
+
+        $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'high'])
+            ->assertExitCode(0);
+    }
 }

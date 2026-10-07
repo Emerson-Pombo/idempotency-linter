@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace IdempotencyLinter\Tests;
 
+use IdempotencyLinter\Analysis\Catalog\Catalog;
+use IdempotencyLinter\Analysis\JobFinder;
+use IdempotencyLinter\Analysis\SinkGuardAnalyzer;
 use IdempotencyLinter\IdempotencyLinterServiceProvider;
+use IdempotencyLinter\Report\Finding;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
@@ -47,5 +51,24 @@ abstract class TestCase extends Orchestra
     protected function fixtureDir(): string
     {
         return $this->fixtureDir ?? throw new \LogicException('Nenhuma fixture criada.');
+    }
+
+    /**
+     * Roda o analisador real (com o catálogo do pacote) sobre o código de um job.
+     *
+     * @return list<Finding>
+     */
+    protected function analyze(string $code): array
+    {
+        $file = $this->fixture('Job'.bin2hex(random_bytes(3)).'.php', $code);
+        $analyzer = new SinkGuardAnalyzer(Catalog::fromConfig(require __DIR__.'/../config/idempotency-linter.php'));
+
+        $findings = [];
+
+        foreach ((new JobFinder())->findInFile($file) as $job) {
+            array_push($findings, ...$analyzer->analyze($job));
+        }
+
+        return $findings;
     }
 }
