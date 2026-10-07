@@ -21,6 +21,9 @@ final class RuleMatcher
             'static_call' => $call->kind === CallKind::StaticCall
                 && $this->classMatches($call, $rule)
                 && $this->nameIn($call, $rule->methods),
+            'method_call' => $call->kind === CallKind::Method
+                && $this->classMatches($call, $rule)
+                && $this->nameIn($call, $rule->methods),
             'function' => $call->kind === CallKind::Function && $this->nameIn($call, $rule->methods),
             'array_key' => $call->kind === CallKind::ArrayLiteral && $this->hasKey($call, $rule->keys),
             default => false,

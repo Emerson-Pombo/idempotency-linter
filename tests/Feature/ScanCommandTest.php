@@ -110,4 +110,62 @@ final class ScanCommandTest extends TestCase
         $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'high'])
             ->assertExitCode(0);
     }
+
+    public function test_real_analyzer_accepts_protected_job_and_summarizes_directory(): void
+    {
+        $this->fixture('Safe.php', <<<'PHP'
+        <?php
+        use Illuminate\Support\Facades\Cache;
+        use Illuminate\Support\Facades\Mail;
+
+        class Safe implements \Illuminate\Contracts\Queue\ShouldQueue
+        {
+            public function handle(): void
+            {
+                if (! Cache::add('sent', true, 60)) {
+                    return;
+                }
+
+                Mail::send($mailable);
+            }
+        }
+        PHP);
+        $this->fixture('Risky.php', <<<'PHP'
+        <?php
+        use Illuminate\Support\Facades\Mail;
+
+        class Risky implements \Illuminate\Contracts\Queue\ShouldQueue
+        {
+            public function handle(): void
+            {
+                Mail::send($mailable);
+            }
+        }
+        PHP);
+
+        $this->artisan('idempotency:scan', ['paths' => [$this->fixtureDir()], '--fail-on' => 'none'])
+            ->expectsOutputToContain('2 jobs analisados, 1 com risco, 1 protegidos')
+            ->assertExitCode(0);
+    }
+
+    public function test_real_analyzer_passes_when_job_is_protected(): void
+    {
+        $file = $this->fixture('Safe.php', <<<'PHP'
+        <?php
+        use Illuminate\Support\Facades\Cache;
+        use Illuminate\Support\Facades\Mail;
+
+        class Safe implements \Illuminate\Contracts\Queue\ShouldQueue
+        {
+            public function handle(): void
+            {
+                Cache::lock('k', 10)->get();
+                Mail::send($mailable);
+            }
+        }
+        PHP);
+
+        $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'low'])
+            ->assertExitCode(0);
+    }
 }

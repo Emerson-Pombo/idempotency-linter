@@ -21,10 +21,10 @@ php artisan idempotency:scan app/Jobs
 ```
 
 ```
-🔴 ALTO RISCO — app/Jobs/ProcessarPagamentoJob.php:7
+🔴 ALTO RISCO — app/Jobs/ProcessarPagamentoJob.php:16
    Chamada a gateway de pagamento sem verificação de idempotência.
 
-❌ 8 jobs analisados, 1 com risco, 7 protegidos corretamente.
+❌ 2 jobs analisados, 1 com risco, 1 protegidos corretamente.
 ```
 
 ## Escopo do MVP
@@ -36,6 +36,27 @@ php artisan idempotency:scan app/Jobs
 - Relatório de risco (alto/médio/baixo) com arquivo e linha exatos.
 
 Fora do escopo por enquanto: análise dinâmica/runtime, idempotência distribuída entre microsserviços, correção automática, outros ecossistemas de fila (BullMQ, Sidekiq, Celery) e outras interfaces (VSCode, CI, SaaS) — tudo isso é evolução futura planejada.
+
+## Como a análise funciona
+
+Para cada job `ShouldQueue`, o linter lê o corpo do `handle()` e:
+
+1. **Procura sinks:** chamadas do catálogo `sinks` (pagamento, e-mail, notificação, HTTP, inserção no banco). Cada chamada encontrada gera um achado, com a linha exata.
+2. **Procura guards:** chamadas do catálogo `guards` (`Cache::lock`/`Cache::add`, `firstOrCreate`/`updateOrCreate`/`upsert`, chave de idempotência em arrays como `['idempotency_key' => ...]`). Um guard só protege o que aparece **depois dele** no código; guard posterior ao sink não conta. Uma chave de idempotência também protege a chamada que a recebe como argumento.
+3. **Considera proteção parcial:** se o job implementa `ShouldBeUnique`, o risco de cada achado cai um nível (alto → médio → baixo) e achados de risco baixo deixam de ser reportados. O `ShouldBeUnique` evita jobs simultâneos, mas não cobre retry nem reentrega.
+
+Métodos são reconhecidos quando o tipo do objeto é conhecido: chamadas estáticas (`Mail::send()`), funções, e métodos em propriedades (inclusive promovidas no construtor) ou parâmetros do `handle()` com **tipo declarado** (`$this->stripe->create()` com `PaymentIntentService $stripe`). Subclasses, interfaces e traits do catálogo também casam (`Invoice::create()` com `Invoice extends Model`).
+
+### Limitações da v1
+
+- Só o corpo do `handle()` é analisado: efeitos colaterais em métodos privados ou em serviços injetados não são vistos.
+- Sem inferência de tipos: variáveis locais, propriedades sem tipo e chamadas encadeadas (`Mail::to($user)->send($mailable)`) são ignoradas, sem erro.
+- Um guard conta apenas pela posição no código; um guard dentro de um `if` sem relação com o sink protege o sink mesmo assim.
+- Jobs que herdam a interface de uma classe base (`extends BaseJob`) não são detectados.
+
+### Atenção: autoload
+
+Para resolver subclasses e traits, o linter carrega as classes do seu projeto pelo autoload do Composer (`class_exists`, `is_a`, `class_uses`). Ele **não instancia** nem executa classes, mas o autoload de uma classe com código no nível do arquivo executa esse código. Classes que falham ao carregar são ignoradas. Rode o comando no ambiente do projeto, como faria com qualquer comando Artisan.
 
 ## Instalação
 
@@ -62,13 +83,16 @@ O comando sai com código `1` se houver algum achado no nível de `--fail-on` ou
 php artisan vendor:publish --tag=idempotency-linter-config
 ```
 
-Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de **sinks** (efeitos colaterais: pagamento, e-mail, notificação, HTTP, inserção no banco) e **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, chave de idempotência, `ShouldBeUnique`). O formato desses catálogos ainda vai mudar.
+Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de **sinks** (efeitos colaterais: pagamento, e-mail, notificação, HTTP, inserção no banco) e **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, chave de idempotência, `ShouldBeUnique`). O formato desses catálogos ainda vai mudar. Em regras `function`, os nomes das funções vão na chave `functions` (ou `methods`).
 
 ## Roadmap
 
 - [x] Estrutura base: ServiceProvider, config publicável, comando `idempotency:scan`, localização de jobs `ShouldQueue`
-- [ ] Motor de análise: detectar sinks dentro de `handle()`
-- [ ] Detectar guards e decidir se protegem cada sink
+- [x] Motor de análise: detectar sinks dentro de `handle()`
+- [x] Detectar guards e decidir se protegem cada sink
+- [ ] Seguir métodos privados e serviços injetados a partir do `handle()`
+- [ ] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
+- [ ] Resolver chamadas encadeadas (`Mail::to()->send()`)
 - [ ] Saída JSON para CI
 
 ## Contribuindo

@@ -10,11 +10,15 @@
 | "sinks"  → chamadas com efeito colateral sensível a duplicação.
 | "guards" → chamadas/estruturas que contam como proteção contra reexecução.
 |
-| Tipos de correspondência suportados (o motor de análise vai consumir isto):
-|   - static_call : Classe::metodo()           (ex.: facades)
-|   - method_call : $obj->metodo() em instância de uma classe/interface
-|   - function    : funcao()
-|   - interface   : a classe do job implementa a interface (só para guards)
+| Tipos de correspondência suportados (consumidos pelo motor de análise):
+|   - static_call : Classe::metodo()           (ex.: facades). Chave "methods".
+|   - method_call : $this->prop->metodo() / $param->metodo() quando o tipo
+|                   declarado é a classe/interface/trait (ou uma subclasse). Chave "methods".
+|   - function    : funcao(). Nomes na chave "functions".
+|   - array_key   : array literal com a chave string (sem diferenciar maiúsculas). Chave "keys". Só para guards.
+|   - interface   : a classe do job implementa a interface (só para guards).
+|
+| Guards com 'partial' => true reduzem o risco em um nível em vez de eliminar o achado.
 |
 | Risco: 'high' | 'medium' | 'low'
 |
