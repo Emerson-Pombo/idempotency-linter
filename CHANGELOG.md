@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-07
+
 ### Changed
 
 - **Breaking (output):** the whole project is now in English, for international use. This affects what users see:
@@ -48,5 +50,6 @@ First public release.
 - A guard counts by execution order, not by control flow (a guard inside an unrelated `if` still protects the sink).
 - The analyzed project's autoloader is used to resolve class hierarchy.
 
-[Unreleased]: https://github.com/Emerson-Pombo/idempotency-linter/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Emerson-Pombo/idempotency-linter/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Emerson-Pombo/idempotency-linter/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Emerson-Pombo/idempotency-linter/releases/tag/v0.1.0
