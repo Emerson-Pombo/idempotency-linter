@@ -20,6 +20,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         use Illuminate\Support\Facades\Cache;
         use Illuminate\Support\Facades\Http;
         use Illuminate\Support\Facades\Mail;
+        use Illuminate\Database\Eloquent\Model;
 
         class Sample implements ShouldQueue
         {
@@ -40,7 +41,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         $this->assertSame('mail', $findings[0]->sink);
         $this->assertSame(RiskLevel::Medium, $findings[0]->risk);
         $this->assertSame('App\Jobs\Sample', $findings[0]->jobClass);
-        $this->assertSame(14, $findings[0]->line);
+        $this->assertSame(15, $findings[0]->line);
         $this->assertSame('Envio de e-mail sem verificação de idempotência.', $findings[0]->message);
     }
 
@@ -49,7 +50,7 @@ final class SinkGuardAnalyzerTest extends TestCase
         $findings = $this->analyze($this->job("Mail::send(\$a);\nHttp::post('https://x.test', []);"));
 
         $this->assertSame(['mail', 'http'], array_map(fn ($f) => $f->sink, $findings));
-        $this->assertSame([14, 15], array_map(fn ($f) => $f->line, $findings));
+        $this->assertSame([15, 16], array_map(fn ($f) => $f->line, $findings));
     }
 
     public function test_returns_nothing_without_sinks(): void
@@ -70,5 +71,46 @@ final class SinkGuardAnalyzerTest extends TestCase
     public function test_ignores_unrelated_static_calls(): void
     {
         $this->assertSame([], $this->analyze($this->job('Cache::get("k"); Mail::fake();')));
+    }
+
+    public function test_guard_before_sink_protects_it(): void
+    {
+        $this->assertSame([], $this->analyze($this->job(<<<'BODY'
+        if (! Cache::add('sent:1', true, 60)) {
+                    return;
+                }
+                Mail::send($mailable);
+        BODY)));
+    }
+
+    public function test_cache_lock_before_sink_protects_it(): void
+    {
+        $this->assertSame([], $this->analyze($this->job("Cache::lock('k', 10)->get();\nMail::send(\$m);")));
+    }
+
+    public function test_guard_after_sink_does_not_protect_it(): void
+    {
+        $findings = $this->analyze($this->job("Mail::send(\$m);\nCache::add('sent:1', true, 60);"));
+
+        $this->assertCount(1, $findings);
+        $this->assertSame('mail', $findings[0]->sink);
+    }
+
+    public function test_guard_protects_every_later_sink(): void
+    {
+        $this->assertSame([], $this->analyze($this->job("Cache::add('k', 1);\nMail::send(\$a);\nHttp::post('u', []);")));
+    }
+
+    public function test_guard_only_protects_sinks_after_it(): void
+    {
+        $findings = $this->analyze($this->job("Mail::send(\$a);\nCache::add('k', 1);\nHttp::post('u', []);"));
+
+        $this->assertSame(['mail'], array_map(fn ($f) => $f->sink, $findings));
+    }
+
+    public function test_static_upsert_counts_as_guard(): void
+    {
+        $this->assertSame([], $this->analyze($this->job("Model::firstOrCreate(['id' => 1]);\nMail::send(\$m);")));
+        $this->assertSame([], $this->analyze($this->job("Model::updateOrCreate(['id' => 1]);\nMail::send(\$m);")));
     }
 }
