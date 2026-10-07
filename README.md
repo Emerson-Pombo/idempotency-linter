@@ -24,7 +24,7 @@ php artisan idempotency:scan app/Jobs
 🔴 ALTO RISCO — app/Jobs/ProcessarPagamentoJob.php:16
    Chamada a gateway de pagamento sem verificação de idempotência.
 
-❌ 2 jobs analisados, 1 com risco, 1 protegidos corretamente.
+❌ 2 jobs analisados, 1 com risco, 1 protegido corretamente.
 ```
 
 ## Escopo do MVP
@@ -79,6 +79,48 @@ php artisan idempotency:scan --fail-on=high
 
 O comando sai com código `1` se houver algum achado no nível de `--fail-on` ou acima.
 
+### Saída em JSON
+
+Com `--format=json` (padrão: `text`) o comando imprime apenas um documento JSON no stdout, sem ícones nem avisos, e mantém o mesmo código de saída:
+
+```bash
+php artisan idempotency:scan app/Jobs --format=json --fail-on=none > idempotency.json
+```
+
+```json
+{
+    "version": 1,
+    "summary": {
+        "jobs": 2,
+        "risky_jobs": 1,
+        "protected_jobs": 1,
+        "findings": 1,
+        "errors": 0
+    },
+    "findings": [
+        {
+            "file": "app/Jobs/ProcessarPagamentoJob.php",
+            "line": 16,
+            "job": "App\\Jobs\\ProcessarPagamentoJob",
+            "sink": "payment",
+            "risk": "high",
+            "message": "Chamada a gateway de pagamento sem verificação de idempotência."
+        }
+    ],
+    "errors": []
+}
+```
+
+- `findings` vem ordenado do maior para o menor risco. `risk` é `high`, `medium` ou `low`.
+- `errors` lista caminhos inexistentes e arquivos com erro de sintaxe, que não interrompem a varredura.
+- `version` muda quando o formato muda de forma incompatível.
+
+Exemplo no GitHub Actions, falhando só em risco alto e guardando o relatório:
+
+```yaml
+- run: php artisan idempotency:scan --format=json --fail-on=high | tee idempotency.json
+```
+
 ### Configuração
 
 ```bash
@@ -96,7 +138,7 @@ Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de 
 - [x] Seguir métodos da própria classe a partir do `handle()`
 - [ ] Seguir serviços injetados e métodos herdados a partir do `handle()`
 - [x] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
-- [ ] Saída JSON para CI
+- [x] Saída JSON para CI (`--format=json`)
 
 ## Desenvolvimento
 

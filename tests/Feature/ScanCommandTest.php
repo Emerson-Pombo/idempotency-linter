@@ -9,6 +9,7 @@ use IdempotencyLinter\Analysis\JobClass;
 use IdempotencyLinter\Report\Finding;
 use IdempotencyLinter\Report\RiskLevel;
 use IdempotencyLinter\Tests\TestCase;
+use Illuminate\Support\Facades\Artisan;
 
 final class ScanCommandTest extends TestCase
 {
@@ -46,7 +47,7 @@ final class ScanCommandTest extends TestCase
     public function test_succeeds_when_jobs_have_no_findings(): void
     {
         $this->artisan('idempotency:scan', ['paths' => [$this->job()]])
-            ->expectsOutputToContain('1 job analisados, 0 com risco, 1 protegidos')
+            ->expectsOutputToContain('1 job analisado, 0 com risco, 1 protegido')
             ->assertExitCode(0);
     }
 
@@ -145,7 +146,7 @@ final class ScanCommandTest extends TestCase
         PHP);
 
         $this->artisan('idempotency:scan', ['paths' => [$this->fixtureDir()], '--fail-on' => 'none'])
-            ->expectsOutputToContain('2 jobs analisados, 1 com risco, 1 protegidos')
+            ->expectsOutputToContain('2 jobs analisados, 1 com risco, 1 protegido')
             ->assertExitCode(0);
     }
 
@@ -186,6 +187,125 @@ final class ScanCommandTest extends TestCase
         PHP);
 
         $this->artisan('idempotency:scan', ['paths' => [$file], '--fail-on' => 'medium'])
+            ->expectsOutputToContain('MÉDIO RISCO')
+            ->assertExitCode(1);
+    }
+
+    private const RISKY_JOB = <<<'PHP'
+    <?php
+    use Illuminate\Support\Facades\Mail;
+
+    class Risky implements \Illuminate\Contracts\Queue\ShouldQueue
+    {
+        public function handle(): void
+        {
+            Mail::send($mailable);
+        }
+    }
+    PHP;
+
+    /** @return array{0: int, 1: array<string, mixed>, 2: string} código, JSON decodificado, saída bruta */
+    private function scanJson(array $arguments): array
+    {
+        $code = Artisan::call('idempotency:scan', $arguments + ['--format' => 'json']);
+        $output = Artisan::output();
+
+        return [$code, json_decode($output, true, flags: JSON_THROW_ON_ERROR), $output];
+    }
+
+    public function test_json_format_reports_summary_and_findings(): void
+    {
+        $file = $this->fixture('Risky.php', self::RISKY_JOB);
+
+        [$code, $report] = $this->scanJson(['paths' => [$file]]);
+
+        $this->assertSame(1, $code);
+        $this->assertSame(1, $report['version']);
+        $this->assertSame(['jobs' => 1, 'risky_jobs' => 1, 'protected_jobs' => 0, 'findings' => 1, 'errors' => 0], $report['summary']);
+        $this->assertSame([[
+            'file' => $file,
+            'line' => 8,
+            'job' => 'Risky',
+            'sink' => 'mail',
+            'risk' => 'medium',
+            'message' => 'Envio de e-mail sem verificação de idempotência.',
+        ]], $report['findings']);
+        $this->assertSame([], $report['errors']);
+    }
+
+    public function test_json_output_contains_only_the_json_document(): void
+    {
+        $file = $this->fixture('Risky.php', self::RISKY_JOB);
+
+        [, , $output] = $this->scanJson(['paths' => [$file]]);
+
+        $this->assertStringStartsWith('{', ltrim($output));
+        $this->assertStringEndsWith('}', rtrim($output));
+        $this->assertStringNotContainsString('MÉDIO RISCO', $output);
+        $this->assertStringNotContainsString('analisado', $output);
+    }
+
+    public function test_json_format_respects_fail_on(): void
+    {
+        $file = $this->fixture('Risky.php', self::RISKY_JOB);
+
+        [$high] = $this->scanJson(['paths' => [$file], '--fail-on' => 'high']);
+        [$none] = $this->scanJson(['paths' => [$file], '--fail-on' => 'none']);
+
+        $this->assertSame(0, $high);
+        $this->assertSame(0, $none);
+    }
+
+    public function test_json_format_without_jobs_is_a_valid_empty_report(): void
+    {
+        [$code, $report, $output] = $this->scanJson(['paths' => [$this->fixture('x.php', '<?php')]]);
+
+        $this->assertSame(0, $code);
+        $this->assertSame(['jobs' => 0, 'risky_jobs' => 0, 'protected_jobs' => 0, 'findings' => 0, 'errors' => 0], $report['summary']);
+        $this->assertStringNotContainsString('Nenhum job', $output);
+    }
+
+    public function test_json_format_reports_unparsable_files_and_missing_paths_as_errors(): void
+    {
+        $broken = $this->fixture('Broken.php', "<?php\nclass {");
+
+        [$code, $report] = $this->scanJson(['paths' => [$broken, '/caminho/inexistente']]);
+
+        $this->assertSame(0, $code);
+        $this->assertSame(2, $report['summary']['errors']);
+        $this->assertSame(['/caminho/inexistente', $broken], array_column($report['errors'], 'file'));
+        $this->assertSame('Caminho não encontrado', $report['errors'][0]['error']);
+    }
+
+    public function test_json_format_keeps_findings_sorted_by_risk(): void
+    {
+        $this->fixture('A.php', str_replace('Risky', 'A', self::RISKY_JOB));
+        $this->fixture('B.php', <<<'PHP'
+        <?php
+        class B implements \Illuminate\Contracts\Queue\ShouldQueue
+        {
+            public function handle(): void
+            {
+                \IdempotencyLinter\Tests\Fixtures\Models\Invoice::create([]);
+            }
+        }
+        PHP);
+
+        [, $report] = $this->scanJson(['paths' => [$this->fixtureDir()], '--fail-on' => 'none']);
+
+        $this->assertSame(['medium', 'low'], array_column($report['findings'], 'risk'));
+    }
+
+    public function test_rejects_unknown_format(): void
+    {
+        $this->artisan('idempotency:scan', ['--format' => 'xml'])
+            ->expectsOutputToContain('Valor inválido para --format')
+            ->assertExitCode(2);
+    }
+
+    public function test_text_is_still_the_default_format(): void
+    {
+        $this->artisan('idempotency:scan', ['paths' => [$this->fixture('Risky.php', self::RISKY_JOB)]])
             ->expectsOutputToContain('MÉDIO RISCO')
             ->assertExitCode(1);
     }
