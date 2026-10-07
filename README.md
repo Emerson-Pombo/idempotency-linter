@@ -15,7 +15,7 @@ Hoje, as ferramentas existentes (bibliotecas de idempotência, middlewares de de
 Um linter estático (via [nikic/php-parser](https://github.com/nikic/PHP-Parser)) que percorre o método `handle()` de cada Job Laravel, identifica chamadas de efeitos colaterais perigosos ("sinks") e verifica se existe uma guarda de idempotência reconhecida ("guards") protegendo essa chamada. Jobs sem proteção são reportados com nível de risco e localização exata no código.
 
 ```bash
-composer require --dev seu-usuario/idempotency-linter
+composer require --dev emerson-pombo/idempotency-linter
 
 php artisan idempotency:scan app/Jobs
 ```
@@ -24,7 +24,7 @@ php artisan idempotency:scan app/Jobs
 🔴 ALTO RISCO — app/Jobs/ProcessarPagamentoJob.php:7
    Chamada a gateway de pagamento sem verificação de idempotência.
 
-✅ 8 jobs analisados, 1 com risco, 7 protegidos corretamente.
+❌ 8 jobs analisados, 1 com risco, 7 protegidos corretamente.
 ```
 
 ## Escopo do MVP
@@ -41,9 +41,39 @@ Fora do escopo por enquanto: análise dinâmica/runtime, idempotência distribu�
 
 Ainda não publicado no Packagist. Em breve.
 
+## Uso
+
+```bash
+# analisa os caminhos definidos em config (padrão: app/Jobs)
+php artisan idempotency:scan
+
+# um ou mais arquivos/diretórios
+php artisan idempotency:scan app/Jobs app/Domain/Billing/Jobs
+
+# controla o código de saída (útil em CI): high | medium | low (padrão) | none
+php artisan idempotency:scan --fail-on=high
+```
+
+O comando sai com código `1` se houver algum achado no nível de `--fail-on` ou acima.
+
+### Configuração
+
+```bash
+php artisan vendor:publish --tag=idempotency-linter-config
+```
+
+Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de **sinks** (efeitos colaterais: pagamento, e-mail, notificação, HTTP, inserção no banco) e **guards** (`Cache::lock`/`Cache::add`, `firstOrCreate`/`upsert`, chave de idempotência, `ShouldBeUnique`). O formato desses catálogos ainda vai mudar.
+
+## Roadmap
+
+- [x] Estrutura base: ServiceProvider, config publicável, comando `idempotency:scan`, localização de jobs `ShouldQueue`
+- [ ] Motor de análise: detectar sinks dentro de `handle()`
+- [ ] Detectar guards e decidir se protegem cada sink
+- [ ] Saída JSON para CI
+
 ## Contribuindo
 
-Projeto em estágio inicial — issues e discussões são bem-vindas. Um `CONTRIBUTING.md` será adicionado assim que a estrutura base do pacote estiver pronta.
+Projeto em estágio inicial — issues e discussões são bem-vindas. Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licença
 
