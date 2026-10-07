@@ -97,6 +97,16 @@ Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de 
 - [ ] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
 - [ ] Saída JSON para CI
 
+## Desenvolvimento
+
+```bash
+composer install
+composer check     # estilo (Pint) + análise estática (PHPStan nível 6) + testes
+composer format    # aplica o estilo automaticamente
+```
+
+O CI roda os testes em PHP 8.1 a 8.3 com Laravel 10, 11 e 12 (combinações compatíveis), além de Pint e PHPStan.
+
 ## Contribuindo
 
 Projeto em estágio inicial — issues e discussões são bem-vindas. Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
