@@ -12,6 +12,7 @@ use IdempotencyLinter\Analysis\Matching\Call;
 use IdempotencyLinter\Analysis\Matching\CallCollector;
 use IdempotencyLinter\Analysis\Matching\CallKind;
 use IdempotencyLinter\Analysis\Matching\RuleMatcher;
+use IdempotencyLinter\Analysis\Matching\TypeMap;
 use IdempotencyLinter\Report\Finding;
 
 /**
@@ -36,7 +37,7 @@ final class SinkGuardAnalyzer implements JobAnalyzer
             return [];
         }
 
-        $calls = $this->collector->collect($job->entryMethod);
+        $calls = $this->collector->collect($job->entryMethod, TypeMap::forJob($job));
         $guardCalls = array_values(array_filter($calls, $this->isGuard(...)));
 
         $findings = [];
