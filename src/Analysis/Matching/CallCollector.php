@@ -37,6 +37,7 @@ final class CallCollector
                 $node instanceof FuncCall => $this->functionCall($node),
                 $node instanceof MethodCall => $this->methodCall($node, $types),
                 $node instanceof Array_ => $this->arrayLiteral($node),
+                default => null,
             };
 
             if ($call !== null) {

@@ -44,7 +44,7 @@ final class TypeMap
             }
         }
 
-        foreach ($job->node->getMethod('__construct')?->params ?? [] as $param) {
+        foreach ($job->node->getMethod('__construct')->params ?? [] as $param) {
             $type = self::className($param->type);
 
             if ($param->flags !== 0 && $type !== null && $param->var instanceof Node\Expr\Variable && is_string($param->var->name)) {
@@ -54,7 +54,7 @@ final class TypeMap
 
         $variables = [];
 
-        foreach ($job->entryMethod?->params ?? [] as $param) {
+        foreach ($job->entryMethod->params ?? [] as $param) {
             $type = self::className($param->type);
 
             if ($type !== null && $param->var instanceof Node\Expr\Variable && is_string($param->var->name)) {
