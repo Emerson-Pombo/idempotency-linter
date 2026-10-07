@@ -33,13 +33,13 @@ final class JobFinder
         private readonly string $jobInterface = 'Illuminate\Contracts\Queue\ShouldQueue',
         private readonly string $entryMethod = 'handle',
         ?Parser $parser = null,
-        private readonly ClassMatcher $classes = new ClassMatcher(),
+        private readonly ClassMatcher $classes = new ClassMatcher,
     ) {
-        $this->parser = $parser ?? (new ParserFactory())->createForNewestSupportedVersion();
+        $this->parser = $parser ?? (new ParserFactory)->createForNewestSupportedVersion();
     }
 
     /**
-     * @param list<string> $paths arquivos ou diretórios
+     * @param  list<string>  $paths  arquivos ou diretórios
      * @return list<string>
      */
     public function phpFiles(array $paths): array
@@ -49,6 +49,7 @@ final class JobFinder
         foreach ($paths as $path) {
             if (is_file($path)) {
                 $files[] = $path;
+
                 continue;
             }
 
@@ -89,12 +90,12 @@ final class JobFinder
 
         $ast = $this->parser->parse($code) ?? [];
 
-        $traverser = new NodeTraverser();
-        $traverser->addVisitor(new NameResolver());
+        $traverser = new NodeTraverser;
+        $traverser->addVisitor(new NameResolver);
         $ast = $traverser->traverse($ast);
 
         /** @var list<Class_> $classes */
-        $classes = (new NodeFinder())->findInstanceOf($ast, Class_::class);
+        $classes = (new NodeFinder)->findInstanceOf($ast, Class_::class);
 
         $declared = [];
 
@@ -132,8 +133,8 @@ final class JobFinder
     }
 
     /**
-     * @param array<string, Class_> $declared classes nomeadas do arquivo, por nome completo em minúsculas
-     * @param array<string, true> $seen para não entrar em loop em heranças cíclicas
+     * @param  array<string, Class_>  $declared  classes nomeadas do arquivo, por nome completo em minúsculas
+     * @param  array<string, true>  $seen  para não entrar em loop em heranças cíclicas
      */
     private function isJob(Class_ $class, array $declared, array $seen = []): bool
     {
@@ -167,8 +168,8 @@ final class JobFinder
      * Interfaces declaradas na classe e nos ancestrais do mesmo arquivo. Ancestrais
      * de outros arquivos ficam por conta de {@see JobClass::$parent}.
      *
-     * @param array<string, Class_> $declared
-     * @param array<string, true> $seen
+     * @param  array<string, Class_>  $declared
+     * @param  array<string, true>  $seen
      * @return list<string>
      */
     private function declaredInterfaces(Class_ $class, array $declared, array $seen = []): array

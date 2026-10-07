@@ -24,7 +24,7 @@ final class JobFinderTest extends TestCase
         }
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertSame('App\Jobs\SendInvoice', $jobs[0]->className);
@@ -44,7 +44,7 @@ final class JobFinderTest extends TestCase
         }
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertSame('Job', $jobs[0]->className);
@@ -59,7 +59,7 @@ final class JobFinderTest extends TestCase
         class Plain { public function handle(): void {} }
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_ignores_anonymous_classes(): void
@@ -71,7 +71,7 @@ final class JobFinderTest extends TestCase
         };
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_entry_method_is_null_when_missing(): void
@@ -81,7 +81,7 @@ final class JobFinderTest extends TestCase
         class NoHandle implements \Illuminate\Contracts\Queue\ShouldQueue {}
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertNull($jobs[0]->entryMethod);
@@ -111,7 +111,7 @@ final class JobFinderTest extends TestCase
         class Child extends BaseJobDesconhecida {}
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_finds_job_that_extends_parent_from_same_file(): void
@@ -126,7 +126,7 @@ final class JobFinderTest extends TestCase
         class Other {}
         PHP);
 
-        $names = array_map(fn ($job) => $job->className, (new JobFinder())->findInFile($file));
+        $names = array_map(fn ($job) => $job->className, (new JobFinder)->findInFile($file));
 
         $this->assertSame(['App\Jobs\Base', 'App\Jobs\Middle', 'App\Jobs\Leaf'], $names);
     }
@@ -140,7 +140,7 @@ final class JobFinderTest extends TestCase
         class Child extends BaseQueuedJob { public function handle(): void {} }
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
 
         $this->assertCount(1, $jobs);
         $this->assertSame('Child', $jobs[0]->className);
@@ -155,7 +155,7 @@ final class JobFinderTest extends TestCase
         class Contracted implements \IdempotencyLinter\Tests\Fixtures\Jobs\QueueableContract {}
         PHP);
 
-        $this->assertCount(1, (new JobFinder())->findInFile($file));
+        $this->assertCount(1, (new JobFinder)->findInFile($file));
     }
 
     public function test_inheritance_cycles_do_not_loop_or_match(): void
@@ -166,7 +166,7 @@ final class JobFinderTest extends TestCase
         class B extends A {}
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_unrelated_parent_from_another_file_is_not_a_job(): void
@@ -176,7 +176,7 @@ final class JobFinderTest extends TestCase
         class NotJob extends \ArrayObject {}
         PHP);
 
-        $this->assertSame([], (new JobFinder())->findInFile($file));
+        $this->assertSame([], (new JobFinder)->findInFile($file));
     }
 
     public function test_throws_on_syntax_error(): void
@@ -185,7 +185,7 @@ final class JobFinderTest extends TestCase
 
         $this->expectException(ParserError::class);
 
-        (new JobFinder())->findInFile($file);
+        (new JobFinder)->findInFile($file);
     }
 
     public function test_php_files_lists_sorted_unique_php_files_only(): void
@@ -194,7 +194,7 @@ final class JobFinderTest extends TestCase
         $a = $this->fixture('a.php', '<?php');
         $this->fixture('notes.txt', 'x');
 
-        $files = (new JobFinder())->phpFiles([$this->fixtureDir(), $a, '/caminho/inexistente']);
+        $files = (new JobFinder)->phpFiles([$this->fixtureDir(), $a, '/caminho/inexistente']);
 
         $this->assertSame([$a, $b], $files);
     }
@@ -212,7 +212,7 @@ final class JobFinderTest extends TestCase
         class Leaf extends Base {}
         PHP);
 
-        $jobs = (new JobFinder())->findInFile($file);
+        $jobs = (new JobFinder)->findInFile($file);
         $leaf = $jobs[1];
 
         $this->assertSame('App\Jobs\Leaf', $leaf->className);

@@ -12,6 +12,5 @@ final class Guard
         public readonly string $name,
         public readonly bool $partial,
         public readonly array $rules,
-    ) {
-    }
+    ) {}
 }

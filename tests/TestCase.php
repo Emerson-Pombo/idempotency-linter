@@ -65,7 +65,7 @@ abstract class TestCase extends Orchestra
 
         $findings = [];
 
-        foreach ((new JobFinder())->findInFile($file) as $job) {
+        foreach ((new JobFinder)->findInFile($file) as $job) {
             array_push($findings, ...$analyzer->analyze($job));
         }
 

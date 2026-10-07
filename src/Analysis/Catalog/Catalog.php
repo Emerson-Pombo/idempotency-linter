@@ -13,16 +13,15 @@ use InvalidArgumentException;
 final class Catalog
 {
     /**
-     * @param list<Sink> $sinks
-     * @param list<Guard> $guards
-     * @param list<Chain> $chains
+     * @param  list<Sink>  $sinks
+     * @param  list<Guard>  $guards
+     * @param  list<Chain>  $chains
      */
     public function __construct(
         public readonly array $sinks,
         public readonly array $guards,
         public readonly array $chains = [],
-    ) {
-    }
+    ) {}
 
     /** @param array<string, mixed> $config */
     public static function fromConfig(array $config): self

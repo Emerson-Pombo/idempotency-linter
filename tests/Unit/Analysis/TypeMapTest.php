@@ -31,7 +31,7 @@ final class TypeMapTest extends TestCase
         }
         PHP);
 
-        $job = (new JobFinder())->findInFile($file)[0];
+        $job = (new JobFinder)->findInFile($file)[0];
         $types = TypeMap::forJob($job);
 
         $this->assertSame('App\Services\Gateway', $types->property('declared'));

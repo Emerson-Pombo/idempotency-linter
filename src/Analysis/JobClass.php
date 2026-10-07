@@ -13,7 +13,7 @@ use PhpParser\Node\Stmt\ClassMethod;
 final class JobClass
 {
     /**
-     * @param list<string> $interfaces FQCNs das interfaces declaradas diretamente
+     * @param  list<string>  $interfaces  FQCNs das interfaces declaradas na classe e em ancestrais do mesmo arquivo
      */
     public function __construct(
         public readonly string $file,
@@ -23,8 +23,7 @@ final class JobClass
         public readonly Class_ $node,
         public readonly ?ClassMethod $entryMethod,
         public readonly ?string $parent = null,
-    ) {
-    }
+    ) {}
 
     public function implements(string $interface): bool
     {
