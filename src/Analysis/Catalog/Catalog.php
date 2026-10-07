@@ -15,10 +15,12 @@ final class Catalog
     /**
      * @param list<Sink> $sinks
      * @param list<Guard> $guards
+     * @param list<Chain> $chains
      */
     public function __construct(
         public readonly array $sinks,
         public readonly array $guards,
+        public readonly array $chains = [],
     ) {
     }
 
@@ -49,6 +51,8 @@ final class Catalog
             );
         }
 
-        return new self($sinks, $guards);
+        $chains = array_map(Chain::fromArray(...), $config['chains'] ?? []);
+
+        return new self($sinks, $guards, $chains);
     }
 }
