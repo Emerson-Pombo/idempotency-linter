@@ -54,7 +54,7 @@ Encadeamentos são seguidos quando estão declarados no catálogo `chains`, que 
 - Só o corpo do `handle()` é analisado: efeitos colaterais em métodos privados ou em serviços injetados não são vistos.
 - Sem inferência de tipos: variáveis locais, propriedades sem tipo e encadeamentos que não estão no catálogo `chains` (por exemplo `app(Foo::class)->send()`) são ignorados, sem erro.
 - Um guard conta apenas pela posição no código; um guard dentro de um `if` sem relação com o sink protege o sink mesmo assim.
-- Jobs que herdam a interface de uma classe base (`extends BaseJob`) não são detectados.
+- Jobs que herdam a interface de uma classe base (`extends BaseJob`) ou usam uma interface que estende `ShouldQueue` são detectados, desde que a classe base seja resolvível: no mesmo arquivo, ou carregável pelo autoload. Pai que não carrega é ignorado.
 
 ### Atenção: autoload
 
@@ -94,7 +94,7 @@ Gera `config/idempotency-linter.php` com os caminhos padrão e os catálogos de 
 - [x] Detectar guards e decidir se protegem cada sink
 - [x] Resolver chamadas encadeadas declaradas no catálogo (`Mail::to()->send()`, `Http::withToken()->post()`)
 - [ ] Seguir métodos privados e serviços injetados a partir do `handle()`
-- [ ] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
+- [x] Reconhecer jobs que herdam `ShouldQueue` de uma classe base
 - [ ] Saída JSON para CI
 
 ## Contribuindo

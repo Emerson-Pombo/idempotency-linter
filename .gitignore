@@ -1,9 +1,32 @@
+# Dependências
 /vendor/
 /composer.lock
+
+# Caches e relatórios de ferramentas
 /.phpunit.cache/
 .phpunit.result.cache
+/.phpstan/
+.php-cs-fixer.cache
+.pint.cache
+/coverage/
+/build/
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+auth.json
+
+# Logs
+*.log
+
+# Editores e sistema operacional
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
+
+# Configuração local do Claude Code
+/.claude/settings.local.json
 
 # Artefatos de planejamento (spec-driven development)
 /SPEC*.md
