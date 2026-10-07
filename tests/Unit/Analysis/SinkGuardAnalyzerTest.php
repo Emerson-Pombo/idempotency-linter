@@ -382,4 +382,175 @@ final class SinkGuardAnalyzerTest extends TestCase
 
         $this->assertSame(RiskLevel::Medium, $this->analyze($code)[0]->risk);
     }
+
+    /** @param list<string> $methods corpos de métodos privados, `m1`, `m2`... */
+    private function withMethods(string $handleBody, string ...$methods): string
+    {
+        return $this->job($handleBody, implode("\n", $methods));
+    }
+
+    public function test_follows_private_method_called_from_entry_method(): void
+    {
+        $code = $this->withMethods('$this->notify();', 'private function notify(): void { Mail::send($m); }');
+
+        $this->assertSame(['mail'], array_map(fn ($f) => $f->sink, $this->analyze($code)));
+    }
+
+    public function test_finding_points_to_the_line_of_the_sink_in_the_followed_method(): void
+    {
+        $code = $this->withMethods('$this->notify();', "private function notify(): void\n{\nMail::send(\$m);\n}");
+
+        $handleLine = 16;
+        $findings = $this->analyze($code);
+
+        $this->assertCount(1, $findings);
+        $this->assertNotSame($handleLine, $findings[0]->line);
+        $this->assertSame('Mail::send($m);', trim(explode("\n", $code)[$findings[0]->line - 1]));
+    }
+
+    public function test_guard_before_call_site_protects_followed_sink(): void
+    {
+        $code = $this->withMethods("Cache::add('k', 1);\n\$this->notify();", 'private function notify(): void { Mail::send($m); }');
+
+        $this->assertSame([], $this->analyze($code));
+    }
+
+    public function test_guard_inside_followed_method_protects_what_comes_after_it(): void
+    {
+        $code = $this->withMethods(
+            "\$this->claim();\nMail::send(\$m);",
+            "private function claim(): void { Cache::add('k', 1); }",
+        );
+
+        $this->assertSame([], $this->analyze($code));
+    }
+
+    public function test_guard_after_call_site_does_not_protect_followed_sink(): void
+    {
+        $code = $this->withMethods("\$this->notify();\nCache::add('k', 1);", 'private function notify(): void { Mail::send($m); }');
+
+        $this->assertCount(1, $this->analyze($code));
+    }
+
+    public function test_guard_defined_later_in_file_but_called_after_does_not_protect(): void
+    {
+        $code = $this->withMethods(
+            "\$this->notify();\n\$this->claim();",
+            'private function claim(): void { Cache::add("k", 1); }',
+            'private function notify(): void { Mail::send($m); }',
+        );
+
+        $this->assertCount(1, $this->analyze($code));
+    }
+
+    public function test_follows_nested_calls(): void
+    {
+        $code = $this->withMethods(
+            '$this->a();',
+            'private function a(): void { $this->b(); }',
+            'private function b(): void { Mail::send($m); }',
+        );
+
+        $this->assertCount(1, $this->analyze($code));
+    }
+
+    /** Cadeia handle → m1 → … → m{$levels}, com o sink no último método. */
+    private function chain(int $levels): string
+    {
+        $methods = [];
+
+        for ($i = 1; $i <= $levels; $i++) {
+            $body = $i < $levels ? '$this->m'.($i + 1).'();' : 'Mail::send($m);';
+            $methods[] = "private function m{$i}(): void { {$body} }";
+        }
+
+        return $this->withMethods('$this->m1();', ...$methods);
+    }
+
+    public function test_follows_up_to_five_levels_of_calls(): void
+    {
+        $this->assertCount(1, $this->analyze($this->chain(5)));
+    }
+
+    public function test_stops_following_after_five_levels(): void
+    {
+        $this->assertSame([], $this->analyze($this->chain(6)));
+    }
+
+    public function test_recursion_does_not_loop(): void
+    {
+        $code = $this->withMethods(
+            '$this->a();',
+            'private function a(): void { $this->b(); Mail::send($m); }',
+            'private function b(): void { $this->a(); }',
+        );
+
+        $this->assertCount(1, $this->analyze($code));
+    }
+
+    public function test_method_called_twice_reports_once(): void
+    {
+        $code = $this->withMethods('$this->notify(); $this->notify();', 'private function notify(): void { Mail::send($m); }');
+
+        $this->assertCount(1, $this->analyze($code));
+    }
+
+    public function test_reports_when_any_call_site_is_unprotected(): void
+    {
+        $code = $this->withMethods(
+            "\$this->notify();\nCache::add('k', 1);\n\$this->notify();",
+            'private function notify(): void { Mail::send($m); }',
+        );
+
+        $this->assertCount(1, $this->analyze($code));
+    }
+
+    public function test_follows_self_and_static_calls(): void
+    {
+        $code = $this->withMethods(
+            'self::a(); static::b();',
+            'private static function a(): void { Mail::send($m); }',
+            'private static function b(): void { Http::post("u", []); }',
+        );
+
+        $this->assertSame(['mail', 'http'], array_map(fn ($f) => $f->sink, $this->analyze($code)));
+    }
+
+    public function test_does_not_follow_calls_on_other_receivers(): void
+    {
+        $code = $this->withMethods(
+            '$other->notify(); Other::notify(); $this->undefined();',
+            'private function notify(): void { Mail::send($m); }',
+        );
+
+        $this->assertSame([], $this->analyze($code));
+    }
+
+    public function test_followed_method_uses_its_own_parameter_types(): void
+    {
+        $code = $this->withMethods(
+            '$this->pay();',
+            'private function pay(\\Stripe\\Service\\ChargeService $charges): void { $charges->create([]); }',
+        );
+
+        $this->assertSame(['payment'], array_map(fn ($f) => $f->sink, $this->analyze($code)));
+    }
+
+    public function test_entry_parameter_types_do_not_leak_into_followed_methods(): void
+    {
+        $code = str_replace(
+            'public function handle(): void',
+            'public function handle(\\Stripe\\Service\\ChargeService $charges): void',
+            $this->withMethods('$this->pay();', 'private function pay(): void { $charges->create([]); }'),
+        );
+
+        $this->assertSame([], $this->analyze($code));
+    }
+
+    public function test_should_be_unique_still_reduces_risk_of_followed_sinks(): void
+    {
+        $code = $this->unique('$this->notify();', 'private function notify(): void { Mail::send($m); }');
+
+        $this->assertSame(RiskLevel::Low, $this->analyze($code)[0]->risk);
+    }
 }
